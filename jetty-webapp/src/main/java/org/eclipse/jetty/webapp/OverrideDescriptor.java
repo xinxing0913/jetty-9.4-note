@@ -23,12 +23,16 @@ import org.eclipse.jetty.util.resource.Resource;
 /**
  * OverrideDescriptor
  *
- *
+ * 重写的描述文件
  */
-public class OverrideDescriptor extends WebDescriptor
-{
-    public OverrideDescriptor(Resource xml)
-    {
+public class OverrideDescriptor extends WebDescriptor {
+
+    /**
+     * 构造方法
+     *
+     * @param xml
+     */
+    public OverrideDescriptor(Resource xml) {
         super(xml);
     }
 }
