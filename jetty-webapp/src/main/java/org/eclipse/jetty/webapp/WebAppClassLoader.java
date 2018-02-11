@@ -64,32 +64,61 @@ import org.eclipse.jetty.util.resource.ResourceCollection;
  * context classloader will be used.  If that is null then the 
  * classloader that loaded this class is used as the parent.
  */
-public class WebAppClassLoader extends URLClassLoader
-{
-    static
-    {
+public class WebAppClassLoader extends URLClassLoader {
+
+    static {
         registerAsParallelCapable();
     }
 
+    /**
+     * 日志类
+     */
     private static final Logger LOG = Log.getLogger(WebAppClassLoader.class);
+
+    /**
+     * 是否加载Server类
+     */
     private static final ThreadLocal<Boolean> __loadServerClasses = new ThreadLocal<>();
-    
+
+    /**
+     * 上下文
+     */
     private final Context _context;
+
+    /**
+     * 父类加载器
+     */
     private final ClassLoader _parent;
-    private final Set<String> _extensions=new HashSet<String>();
+
+    /**
+     * 扩展
+     */
+    private final Set<String> _extensions = new HashSet<String>();
+
+    /**
+     * 名称
+     */
     private String _name=String.valueOf(hashCode());
+
+    /**
+     * 类文件转换器
+     */
     private final List<ClassFileTransformer> _transformers = new CopyOnWriteArrayList<>();
     
     
     /* ------------------------------------------------------------ */
-    /** The Context in which the classloader operates.
+    /**
+     * The Context in which the classloader operates.
+     *
+     * 上下文
      */
-    public interface Context
-    {
+    public interface Context {
         /* ------------------------------------------------------------ */
         /** Convert a URL or path to a Resource.
-         * The default implementation
-         * is a wrapper for {@link Resource#newResource(String)}.
+         * The default implementation is a wrapper for {@link Resource#newResource(String)}.
+         *
+         * 新建一个资源
+         *
          * @param urlOrPath The URL or path to convert
          * @return The Resource for the URL/path
          * @throws IOException The Resource could not be created.
@@ -98,6 +127,8 @@ public class WebAppClassLoader extends URLClassLoader
 
         /* ------------------------------------------------------------ */
         /**
+         * 获取权限
+         *
          * @return Returns the permissions.
          */
         PermissionCollection getPermissions();
@@ -106,7 +137,10 @@ public class WebAppClassLoader extends URLClassLoader
         /** Is the class a System Class.
          * A System class is a class that is visible to a webapplication,
          * but that cannot be overridden by the contents of WEB-INF/lib or
-         * WEB-INF/classes 
+         * WEB-INF/classes
+         *
+         * 是否是系统类
+         *
          * @param clazz The fully qualified name of the class.
          * @return True if the class is a system class.
          */
@@ -117,7 +151,10 @@ public class WebAppClassLoader extends URLClassLoader
          * A Server class is a class that is part of the implementation of 
          * the server and is NIT visible to a webapplication. The web
          * application may provide it's own implementation of the class,
-         * to be loaded from WEB-INF/lib or WEB-INF/classes 
+         * to be loaded from WEB-INF/lib or WEB-INF/classes
+         *
+         * 是否是服务端类
+         *
          * @param clazz The fully qualified name of the class.
          * @return True if the class is a server class.
          */
@@ -125,6 +162,8 @@ public class WebAppClassLoader extends URLClassLoader
 
         /* ------------------------------------------------------------ */
         /**
+         * 是不是父加载器优先
+         *
          * @return True if the classloader should delegate first to the parent 
          * classloader (standard java behaviour) or false if the classloader 
          * should first try to load from WEB-INF/lib or WEB-INF/classes (servlet 
@@ -133,10 +172,30 @@ public class WebAppClassLoader extends URLClassLoader
         boolean isParentLoaderPriority();
         
         /* ------------------------------------------------------------ */
+
+        /**
+         * 获取额外的类路径
+         *
+         * @return
+         */
         String getExtraClasspath();
 
+        /**
+         * 是不是服务器资源
+         *
+         * @param name
+         * @param parent_url
+         * @return
+         */
         boolean isServerResource(String name, URL parent_url);
 
+        /**
+         * 是不是系统资源
+         *
+         * @param name
+         * @param webapp_url
+         * @return
+         */
         boolean isSystemResource(String name, URL webapp_url);
         
     }
@@ -145,82 +204,84 @@ public class WebAppClassLoader extends URLClassLoader
     /** Run an action with access to ServerClasses
      * <p>Run the passed {@link PrivilegedExceptionAction} with the classloader
      * configured so as to allow server classes to be visible</p>
+     *
+     * 允许访问Server类
+     *
      * @param <T> The type returned by the action
      * @param action The action to run
      * @return The return from the action
      * @throws Exception if thrown by the action
      */
-    public static <T> T runWithServerClassAccess(PrivilegedExceptionAction<T> action) throws Exception
-    {
+    public static <T> T runWithServerClassAccess(PrivilegedExceptionAction<T> action) throws Exception {
         Boolean lsc=__loadServerClasses.get();
-        try
-        {
+        try {
             __loadServerClasses.set(true);
             return action.run();
-        }
-        finally
-        {
-            if (lsc==null)
+        } finally {
+            if (lsc==null) {
                 __loadServerClasses.remove();
-            else
+            } else {
                 __loadServerClasses.set(lsc);
+            }
         }
     }
     
     /* ------------------------------------------------------------ */
     /** 
      * Constructor.
+     *
+     * 构造方法
+     *
      * @param context the context for this classloader
      * @throws IOException if unable to initialize from context
      */
-    public WebAppClassLoader(Context context)
-        throws IOException
-    {
+    public WebAppClassLoader(Context context) throws IOException {
         this(null,context);
     }
     
     /* ------------------------------------------------------------ */
     /** 
      * Constructor.
-     * 
+     *
+     * 构造方法
+     *
      * @param parent the parent classloader 
      * @param context the context for this classloader
      * @throws IOException if unable to initialize classloader
      */
-    public WebAppClassLoader(ClassLoader parent, Context context)
-        throws IOException
-    {
+    public WebAppClassLoader(ClassLoader parent, Context context) throws IOException {
         super(new URL[]{},parent!=null?parent
                 :(Thread.currentThread().getContextClassLoader()!=null?Thread.currentThread().getContextClassLoader()
                         :(WebAppClassLoader.class.getClassLoader()!=null?WebAppClassLoader.class.getClassLoader()
                                 :ClassLoader.getSystemClassLoader())));
         _parent=getParent();
         _context=context;
-        if (_parent==null)
+        if (_parent == null) {
             throw new IllegalArgumentException("no parent classloader!");
+        }
         
         _extensions.add(".jar");
         _extensions.add(".zip");
         
         // TODO remove this system property
         String extensions = System.getProperty(WebAppClassLoader.class.getName() + ".extensions");
-        if(extensions!=null)
-        {
+        if(extensions!=null) {
             StringTokenizer tokenizer = new StringTokenizer(extensions, ",;");
-            while(tokenizer.hasMoreTokens())
+            while(tokenizer.hasMoreTokens()) {
                 _extensions.add(tokenizer.nextToken().trim());
+            }
         }
         
-        if (context.getExtraClasspath()!=null)
+        if (context.getExtraClasspath()!=null) {
             addClassPath(context.getExtraClasspath());
+        }
     }
     
     /* ------------------------------------------------------------ */
     /**
      * @return the name of the classloader
      */
-    public String getName()
-    {
+    public String getName() {
         return _name;
     }
 
@@ -228,79 +289,77 @@ public class WebAppClassLoader extends URLClassLoader
     /**
      * @param name the name of the classloader
      */
-    public void setName(String name)
-    {
+    public void setName(String name) {
         _name=name;
     }
     
 
     /* ------------------------------------------------------------ */
-    public Context getContext()
-    {
+
+    /**
+     * 获取上下文
+     *
+     * @return
+     */
+    public Context getContext() {
         return _context;
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 添加类路径
+     * 目录应该用斜线结尾
+     *
      * @param resource Comma or semicolon separated path of filenames or URLs
      * pointing to directories or jar files. Directories should end
      * with '/'.
      * @throws IOException if unable to add classpath from resource
      */
-    public void addClassPath(Resource resource)
-        throws IOException
-    {
-        if (resource instanceof ResourceCollection)
-        {
-            for (Resource r : ((ResourceCollection)resource).getResources())
+    public void addClassPath(Resource resource) throws IOException {
+        if (resource instanceof ResourceCollection) {
+            for (Resource r : ((ResourceCollection)resource).getResources()) {
                 addClassPath(r);
-        }
-        else
-        {
+            }
+        } else {
             addClassPath(resource.toString());
         }
     }
     
     /* ------------------------------------------------------------ */
     /**
+     * 添加类路径
+     *
      * @param classPath Comma or semicolon separated path of filenames or URLs
      * pointing to directories or jar files. Directories should end
      * with '/'.
      * @throws IOException if unable to add classpath
      */
-    public void addClassPath(String classPath)
-        throws IOException
-    {
-        if (classPath == null)
+    public void addClassPath(String classPath) throws IOException {
+        if (classPath == null) {
             return;
+        }
             
         StringTokenizer tokenizer= new StringTokenizer(classPath, ",;");
-        while (tokenizer.hasMoreTokens())
-        {
+        while (tokenizer.hasMoreTokens()) {
             Resource resource= _context.newResource(tokenizer.nextToken().trim());
             if (LOG.isDebugEnabled())
                 LOG.debug("Path resource=" + resource);
 
             // Add the resource
-            if (resource.isDirectory() && resource instanceof ResourceCollection)
+            if (resource.isDirectory() && resource instanceof ResourceCollection) {
                 addClassPath(resource);
-            else
-            {
+            } else {
                 // Resolve file path if possible
                 File file= resource.getFile();
-                if (file != null)
-                {
+                if (file != null) {
                     URL url= resource.getURI().toURL();
                     addURL(url);
-                }
-                else if (resource.isDirectory())
-                {
+                } else if (resource.isDirectory()) {
                     addURL(resource.getURI().toURL());
-                }
-                else
-                {
-                    if (LOG.isDebugEnabled())
+                } else {
+                    if (LOG.isDebugEnabled()) {
                         LOG.debug("Check file exists and is not nested jar: "+resource);
+                    }
                     throw new IllegalArgumentException("File not resolvable or incompatible with URLClassloader: "+resource);
                 }
             }
@@ -309,10 +368,11 @@ public class WebAppClassLoader extends URLClassLoader
 
     /* ------------------------------------------------------------ */
     /**
+     * 判断是否支持当前文件
+     *
      * @param file Checks if this file type can be added to the classpath.
      */
-    private boolean isFileSupported(String file)
-    {
+    private boolean isFileSupported(String file) {
         int dot = file.lastIndexOf('.');
         return dot!=-1 && _extensions.contains(file.substring(dot));
     }
@@ -320,32 +380,29 @@ public class WebAppClassLoader extends URLClassLoader
     /* ------------------------------------------------------------ */
     /** Add elements to the class path for the context from the jar and zip files found
      *  in the specified resource.
+     *
+     *  添加jar包
+     *
      * @param lib the resource that contains the jar and/or zip files.
      */
-    public void addJars(Resource lib)
-    {
-        if (lib.exists() && lib.isDirectory())
-        {
-            String[] files=lib.list();
-            for (int f=0;files!=null && f<files.length;f++)
-            {
-                try 
-                {
+    public void addJars(Resource lib) {
+        if (lib.exists() && lib.isDirectory()) {
+            String[] files = lib.list();
+            for (int f=0;files!=null && f<files.length;f++) {
+                try {
                     Resource fn=lib.addPath(files[f]);
-                    if(LOG.isDebugEnabled())
+                    if(LOG.isDebugEnabled()) {
                         LOG.debug("addJar - {}", fn);
-                    String fnlc=fn.getName().toLowerCase(Locale.ENGLISH);
+                    }
+                    String fnlc = fn.getName().toLowerCase(Locale.ENGLISH);
                     // don't check if this is a directory, see Bug 353165
-                    if (isFileSupported(fnlc))
-                    {
+                    if (isFileSupported(fnlc)) {
                         String jar=fn.toString();
                         jar=StringUtil.replace(jar, ",", "%2C");
                         jar=StringUtil.replace(jar, ";", "%3B");
                         addClassPath(jar);
                     }
-                }
-                catch (Exception ex)
-                {
+                } catch (Exception ex) {
                     LOG.warn(Log.EXCEPTION,ex);
                 }
             }
@@ -353,32 +410,43 @@ public class WebAppClassLoader extends URLClassLoader
     }
 
     /* ------------------------------------------------------------ */
+
+    /**
+     * 获取权限
+     *
+     * @param cs
+     * @return
+     */
     @Override
-    public PermissionCollection getPermissions(CodeSource cs)
-    {
+    public PermissionCollection getPermissions(CodeSource cs) {
         PermissionCollection permissions=_context.getPermissions();
         PermissionCollection pc= (permissions == null) ? super.getPermissions(cs) : permissions;
         return pc;
     }
 
     /* ------------------------------------------------------------ */
+
+    /**
+     * 获取资源
+     *
+     * @param name
+     * @return
+     * @throws IOException
+     */
     @Override
-    public Enumeration<URL> getResources(String name) throws IOException
-    {
+    public Enumeration<URL> getResources(String name) throws IOException {
         List<URL> from_parent = new ArrayList<>();
         List<URL> from_webapp = new ArrayList<>();
         
         Enumeration<URL> urls = _parent.getResources(name);
-        while (urls!=null && urls.hasMoreElements())
-        {
+        while (urls!=null && urls.hasMoreElements()) {
             URL url = urls.nextElement();
             if (Boolean.TRUE.equals(__loadServerClasses.get()) || !_context.isServerResource(name,url))
                 from_parent.add(url);
         }
 
         urls = this.findResources(name);
-        while (urls!=null && urls.hasMoreElements())
-        {
+        while (urls!=null && urls.hasMoreElements()) {
             URL url = urls.nextElement();
             if (!_context.isSystemResource(name,url) || from_parent.isEmpty())
                 from_webapp.add(url);
@@ -386,13 +454,10 @@ public class WebAppClassLoader extends URLClassLoader
 
         List<URL> resources;
         
-        if (_context.isParentLoaderPriority())
-        {
+        if (_context.isParentLoaderPriority()) {
             from_parent.addAll(from_webapp);
             resources = from_parent;
-        }
-        else
-        {
+        } else {
             from_webapp.addAll(from_parent);
             resources = from_webapp;
         }
@@ -410,22 +475,19 @@ public class WebAppClassLoader extends URLClassLoader
      * NOTE: this method provides a convenience of hacking off a leading /
      * should one be present. This is non-standard and it is recommended 
      * to not rely on this behavior
+     *
+     * 获取资源
      */
     @Override
-    public URL getResource(String name)
-    {
+    public URL getResource(String name) {
         URL resource=null;
-        if (_context.isParentLoaderPriority())
-        {
+        if (_context.isParentLoaderPriority()) {
             URL parent_url=_parent.getResource(name);
             
             // return if we have a url the webapp is allowed to see
-            if (parent_url!=null
-                && (Boolean.TRUE.equals(__loadServerClasses.get()) 
-                    || !_context.isServerResource(name,parent_url)))
+            if (parent_url!=null && (Boolean.TRUE.equals(__loadServerClasses.get()) || !_context.isServerResource(name,parent_url))) {
                 resource = parent_url;
-            else
-            {
+            } else {
                 URL webapp_url = this.findResource(name);
 
                 // If found here then OK to use regardless of system or server classes
@@ -433,18 +495,16 @@ public class WebAppClassLoader extends URLClassLoader
                 // would have returned it.
                 // If it is a server resource, doesn't matter as we have loaded it from the 
                 // webapp
-                if (webapp_url!=null)
+                if (webapp_url!=null) {
                     resource = webapp_url;
+                }
             }
-        }
-        else
-        {
+        } else {
             URL webapp_url = this.findResource(name);
 
-            if (webapp_url!=null && !_context.isSystemResource(name,webapp_url))
+            if (webapp_url!=null && !_context.isSystemResource(name,webapp_url)) {
                 resource = webapp_url;
-            else
-            {
+            } else {
 
                 // Couldn't find or see a webapp resource, so try a parent
                 URL parent_url=_parent.getResource(name);
@@ -454,66 +514,75 @@ public class WebAppClassLoader extends URLClassLoader
                     resource = parent_url;
                 // We couldn't find a parent resource, so OK to return a webapp one if it exists 
                 // and we just couldn't see it before 
-                else if (webapp_url!=null)
+                else if (webapp_url!=null) {
                     resource = webapp_url;
+                }
             }
         }
         
         // Perhaps this failed due to leading /
-        if (resource==null && name.startsWith("/"))
+        if (resource==null && name.startsWith("/")) {
             resource = getResource(name.substring(1));
+        }
 
-        if (LOG.isDebugEnabled())
+        if (LOG.isDebugEnabled()) {
             LOG.debug("getResource {} {}",name,resource);
+        }
        
         return resource;
         
     }
 
     /* ------------------------------------------------------------ */
+
+    /**
+     * 加载类
+     *
+     * @param name
+     * @param resolve
+     * @return
+     * @throws ClassNotFoundException
+     */
     @Override
-    protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException
-    {
-        synchronized (getClassLoadingLock(name))
-        {            
+    protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+        synchronized (getClassLoadingLock(name)) {
             ClassNotFoundException ex= null;
             Class<?> parent_class = null;
             Class<?> webapp_class = null;
             
             // Has this loader loaded the class already?
             webapp_class = findLoadedClass(name);
-            if (webapp_class != null)
-            {
-                if (LOG.isDebugEnabled())
+
+            // 如果已经加载了，则直接返回
+            if (webapp_class != null) {
+                if (LOG.isDebugEnabled()) {
                     LOG.debug("found webapp loaded {}",webapp_class);
+                }
                 return webapp_class;
             }
             
             // Should we try the parent loader first?
-            if (_context.isParentLoaderPriority())
-            {
+            // 是否首先尝试父加载器
+            if (_context.isParentLoaderPriority()) {
                 // Try the parent loader
-                try
-                {
+                try {
                     parent_class = _parent.loadClass(name); 
 
                     // If the webapp is allowed to see this class
-                    if (Boolean.TRUE.equals(__loadServerClasses.get()) || !_context.isServerClass(parent_class))
-                    {
-                        if (LOG.isDebugEnabled())
+                    if (Boolean.TRUE.equals(__loadServerClasses.get()) || !_context.isServerClass(parent_class)) {
+                        if (LOG.isDebugEnabled()) {
                             LOG.debug("PLP parent loaded {}",parent_class);
+                        }
                         return parent_class;
                     }
-                }
-                catch (ClassNotFoundException e)
-                {
+                } catch (ClassNotFoundException e) {
                     // Save it for later
                     ex = e;
                 }
                 
                 // Try the webapp loader
-                try
-                {
+                // 然后再使用当前web应用的类加载器
+                try {
                     // If found here then OK to use regardless of system or server classes
                     // If it is a system class, we've already tried to load from parent, so
                     // would have returned it.
@@ -521,65 +590,62 @@ public class WebAppClassLoader extends URLClassLoader
                     // webapp
                     webapp_class = this.findClass(name);
                     resolveClass(webapp_class);
-                    if (LOG.isDebugEnabled())
+                    if (LOG.isDebugEnabled()) {
                         LOG.debug("PLP webapp loaded {}",webapp_class);
+                    }
                     return webapp_class;
-                }
-                catch (ClassNotFoundException e)
-                {
-                    if (ex==null)
+                } catch (ClassNotFoundException e) {
+                    if (ex==null) {
                         ex = e;
-                    else
+                    } else {
                         ex.addSuppressed(e);
+                    }
                 }
                 
                 throw ex;
-            }
-            else
-            {
+            } else {
                 // Not parent loader priority, so...
 
                 // Try the webapp classloader first
                 // Look in the webapp classloader as a resource, to avoid 
                 // loading a system class.
+                // 首先在应用的文件系统里找
                 String path = name.replace('.', '/').concat(".class");
                 URL webapp_url = findResource(path);
                 
-                if (webapp_url!=null && !_context.isSystemResource(name,webapp_url))
-                {
+                if (webapp_url!=null && !_context.isSystemResource(name,webapp_url)) {
                     webapp_class = this.foundClass(name,webapp_url);
                     resolveClass(webapp_class);
-                    if (LOG.isDebugEnabled())
+                    if (LOG.isDebugEnabled()) {
                         LOG.debug("WAP webapp loaded {}",webapp_class);
+                    }
                     return webapp_class;
                 }
 
                 // Try the parent loader
-                try
-                {
+                // 然后在父类加载器中寻找
+                try {
                     parent_class = _parent.loadClass(name); 
                     
                     // If the webapp is allowed to see this class
-                    if (Boolean.TRUE.equals(__loadServerClasses.get()) || !_context.isServerClass(parent_class))
-                    {
-                        if (LOG.isDebugEnabled())
+                    if (Boolean.TRUE.equals(__loadServerClasses.get()) || !_context.isServerClass(parent_class)) {
+                        if (LOG.isDebugEnabled()) {
                             LOG.debug("WAP parent loaded {}",parent_class);
+                        }
                         return parent_class;
                     }
-                }
-                catch (ClassNotFoundException e)
-                {
+                } catch (ClassNotFoundException e) {
                     ex=e;
                 }
 
                 // We couldn't find a parent class, so OK to return a webapp one if it exists 
                 // and we just couldn't see it before 
-                if (webapp_url!=null)
-                {
+                if (webapp_url!=null) {
                     webapp_class = this.foundClass(name,webapp_url);
                     resolveClass(webapp_class);
-                    if (LOG.isDebugEnabled())
+                    if (LOG.isDebugEnabled()) {
                         LOG.debug("WAP !server webapp loaded {}",webapp_class);
+                    }
                     return webapp_class;
                 }
                 
@@ -590,95 +656,116 @@ public class WebAppClassLoader extends URLClassLoader
 
     /* ------------------------------------------------------------ */
     /**
+     * 添加类文件转换
+     *
      * @param transformer the transformer to add
      * @deprecated {@link #addTransformer(ClassFileTransformer)} instead
      */
     @Deprecated
-    public void addClassFileTransformer(ClassFileTransformer transformer)
-    {
+    public void addClassFileTransformer(ClassFileTransformer transformer) {
         _transformers.add(transformer);
     }
     
     /* ------------------------------------------------------------ */
     /**
+     * 移除类文件转换
+     *
      * @param transformer the transformer to remove
      * @return true if transformer was removed
      * @deprecated use {@link #removeTransformer(ClassFileTransformer)} instead
      */
     @Deprecated
-    public boolean removeClassFileTransformer(ClassFileTransformer transformer)
-    {
+    public boolean removeClassFileTransformer(ClassFileTransformer transformer) {
         return _transformers.remove(transformer);
     }
 
     /* ------------------------------------------------------------ */
-    public void addTransformer(ClassFileTransformer transformer)
-    {
+
+    /**
+     * 添加转换
+     *
+     * @param transformer
+     */
+    public void addTransformer(ClassFileTransformer transformer) {
         _transformers.add(transformer);
     }
     
     /* ------------------------------------------------------------ */
-    public boolean removeTransformer(ClassFileTransformer transformer)
-    {
+
+    /**
+     * 移除转换
+     *
+     * @param transformer
+     * @return
+     */
+    public boolean removeTransformer(ClassFileTransformer transformer) {
         return _transformers.remove(transformer);
     }
 
     /* ------------------------------------------------------------ */
+
+    /**
+     * 获取类定义
+     *
+     * @param name
+     * @return
+     * @throws ClassNotFoundException
+     */
     @Override
-    protected Class<?> findClass(final String name) throws ClassNotFoundException
-    {
-        if (_transformers.isEmpty())
+    protected Class<?> findClass(final String name) throws ClassNotFoundException {
+        if (_transformers.isEmpty()) {
             return super.findClass(name);
+        }
 
         String path = name.replace('.', '/').concat(".class");
         URL url = findResource(path);
-        if (url==null)
+        if (url==null) {
             throw new ClassNotFoundException(name);
+        }
         return foundClass(name,url);
     }
     
     /* ------------------------------------------------------------ */
-    protected Class<?> foundClass(final String name, URL url) throws ClassNotFoundException
-    {
-        if (_transformers.isEmpty())
+
+    /**
+     * 寻找类定义
+     *
+     * @param name
+     * @param url
+     * @return
+     * @throws ClassNotFoundException
+     */
+    protected Class<?> foundClass(final String name, URL url) throws ClassNotFoundException {
+        if (_transformers.isEmpty()) {
             return super.findClass(name);
+        }
 
         InputStream content=null;
-        try
-        {
+        try {
             content = url.openStream();
             byte[] bytes = IO.readBytes(content);
 
-            if (LOG.isDebugEnabled())
+            if (LOG.isDebugEnabled()) {
                 LOG.debug("foundClass({}) url={} cl={}",name,url,this);
+            }
 
-            for (ClassFileTransformer transformer : _transformers)
-            {
+            for (ClassFileTransformer transformer : _transformers) {
                 byte[] tmp = transformer.transform(this,name,null,null,bytes);
-                if (tmp != null)
+                if (tmp != null) {
                     bytes = tmp;
+                }
             }
 
             return defineClass(name,bytes,0,bytes.length);
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             throw new ClassNotFoundException(name,e);
-        }
-        catch (IllegalClassFormatException e)
-        {
+        } catch (IllegalClassFormatException e) {
             throw new ClassNotFoundException(name,e);
-        }
-        finally
-        {
-            if (content!=null)
-            {
-                try
-                {
+        } finally {
+            if (content != null) {
+                try {
                     content.close(); 
-                }
-                catch (IOException e)
-                {
+                } catch (IOException e) {
                     throw new ClassNotFoundException(name,e);
                 }
             }
@@ -687,16 +774,26 @@ public class WebAppClassLoader extends URLClassLoader
 
     
     /* ------------------------------------------------------------ */
+
+    /**
+     * 关闭
+     *
+     * @throws IOException
+     */
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
         super.close();
     }
 
     /* ------------------------------------------------------------ */
+
+    /**
+     * 转换为字符串
+     *
+     * @return
+     */
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "WebAppClassLoader=" + _name+"@"+Long.toHexString(hashCode());
     }
     
