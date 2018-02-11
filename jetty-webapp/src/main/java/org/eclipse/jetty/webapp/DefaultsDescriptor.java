@@ -23,11 +23,16 @@ import org.eclipse.jetty.util.resource.Resource;
 /**
  * DefaultsDescriptor
  *
+ * 默认的描述文件
  */
-public class DefaultsDescriptor extends WebDescriptor
-{
-    public DefaultsDescriptor(Resource xml)
-    {
+public class DefaultsDescriptor extends WebDescriptor {
+
+    /**
+     * 构造方法
+     *
+     * @param xml
+     */
+    public DefaultsDescriptor(Resource xml) {
         super(xml);
     }
 }
