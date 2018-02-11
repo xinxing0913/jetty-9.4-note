@@ -81,23 +81,54 @@ import org.eclipse.jetty.util.resource.ResourceCollection;
  * the default being  {@link org.eclipse.jetty.webapp.WebXmlConfiguration} and
  * {@link org.eclipse.jetty.webapp.JettyWebXmlConfiguration}.
  *
+ * Web应用的上下文处理器
  */
 @ManagedObject("Web Application ContextHandler")
-public class WebAppContext extends ServletContextHandler implements WebAppClassLoader.Context
-{
+public class WebAppContext extends ServletContextHandler implements WebAppClassLoader.Context {
+    /**
+     * 日志类
+     */
     static final Logger LOG = Log.getLogger(WebAppContext.class);
 
+    /**
+     * 临时目录
+     */
     public static final String TEMPDIR = "javax.servlet.context.tempdir";
+
+    /**
+     * 临时目录的基目录
+     */
     public static final String BASETEMPDIR = "org.eclipse.jetty.webapp.basetempdir";
+
+    /**
+     * 默认文件
+     */
     public final static String WEB_DEFAULTS_XML="org/eclipse/jetty/webapp/webdefault.xml";
+
+    /**
+     * 错误页面
+     */
     public final static String ERROR_PAGE="org.eclipse.jetty.server.error_page";
+
+    /**
+     * 系统类
+     */
     public final static String SERVER_SYS_CLASSES = "org.eclipse.jetty.webapp.systemClasses";
+
+    /**
+     * 服务类
+     */
     public final static String SERVER_SRV_CLASSES = "org.eclipse.jetty.webapp.serverClasses";
 
+    /**
+     * 默认目录
+     */
     private String[] __dftProtectedTargets = {"/web-inf", "/meta-inf"};
 
-    public static final String[] DEFAULT_CONFIGURATION_CLASSES =
-    {
+    /**
+     * 默认的配置类
+     */
+    public static final String[] DEFAULT_CONFIGURATION_CLASSES = {
         "org.eclipse.jetty.webapp.WebInfConfiguration",
         "org.eclipse.jetty.webapp.WebXmlConfiguration",
         "org.eclipse.jetty.webapp.MetaInfConfiguration",
@@ -110,8 +141,10 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
     // system classloader.
     // TODO This centrally managed list of features that are exposed/hidden needs to be replaced
     // with a more automatic distributed mechanism
-    public final static String[] __dftSystemClasses =
-    {
+    //
+    // 默认的系统类
+    // 它们总是被系统类加载器进行加载
+    public final static String[] __dftSystemClasses = {
         "java.",                            // Java SE classes (per servlet spec v2.5 / SRV.9.7.2)
         "javax.",                           // Java SE classes (per servlet spec v2.5 / SRV.9.7.2)
         "org.xml.",                         // needed by javax.xml
@@ -136,8 +169,9 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
     // TODO This centrally managed list of features that are exposed/hidden needs to be replaced
     // with a more automatic distributed mechanism
     // TODO should be white list rather than black list
-    public final static String[] __dftServerClasses =
-    {
+    //
+    // 默认的服务类
+    public final static String[] __dftServerClasses = {
         "-org.eclipse.jetty.server.session.SessionData", //don't hide SessionData for de/serialization purposes
         "-org.eclipse.jetty.jmx.",          // don't hide jmx classes
         "-org.eclipse.jetty.util.annotation.", // don't hide jmx annotation
@@ -158,101 +192,207 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
         "org.eclipse.jetty."                // hide other jetty classes
     } ;
 
+    /**
+     * 配置类
+     */
     private final List<String> _configurationClasses = new ArrayList<>();
+
+    /**
+     * 系统类
+     */
     private ClasspathPattern _systemClasses = null;
+
+    /**
+     * 服务类
+     */
     private ClasspathPattern _serverClasses = null;
 
+    /**
+     * 配置
+     */
     private final List<Configuration> _configurations = new ArrayList<>();
-    private String _defaultsDescriptor=WEB_DEFAULTS_XML;
-    private String _descriptor=null;
+
+    /**
+     * 默认描述符
+     */
+    private String _defaultsDescriptor = WEB_DEFAULTS_XML;
+
+    /**
+     * 描述文件
+     */
+    private String _descriptor = null;
+
+    /**
+     * 重写的描述文件
+     */
     private final List<String> _overrideDescriptors = new ArrayList<>();
-    private boolean _distributable=false;
-    private boolean _extractWAR=true;
-    private boolean _copyDir=false;
-    private boolean _copyWebInf=false;
-    private boolean _logUrlOnStart =false;
-    private boolean _parentLoaderPriority= Boolean.getBoolean("org.eclipse.jetty.server.webapp.parentLoaderPriority");
+
+    /**
+     * 是不是分布式
+     */
+    private boolean _distributable = false;
+
+    /**
+     * 是否解压war包
+     */
+    private boolean _extractWAR = true;
+
+    /**
+     * 是否拷贝目录
+     */
+    private boolean _copyDir = false;
+
+    /**
+     * 是否拷贝web-inf
+     */
+    private boolean _copyWebInf = false;
+
+    /**
+     * 启动时记录url
+     */
+    private boolean _logUrlOnStart = false;
+
+    /**
+     * 父加载器优先级
+     */
+    private boolean _parentLoaderPriority = Boolean.getBoolean("org.eclipse.jetty.server.webapp.parentLoaderPriority");
+
+    /**
+     * 权限列表
+     */
     private PermissionCollection _permissions;
 
+    /**
+     * 白名单上下文
+     */
     private String[] _contextWhiteList = null;
 
+    /**
+     * 临时目录
+     */
     private File _tmpDir;
+
+    /**
+     * 是否是持久的
+     */
     private boolean _persistTmpDir = false;
- 
+
+    /**
+     * war包地址
+     */
     private String _war;
+
+    /**
+     * 是否提取类路径
+     */
     private String _extraClasspath;
+
+    /**
+     * 不可用异常
+     */
     private Throwable _unavailableException;
 
+    /**
+     * 资源别名
+     */
     private Map<String, String> _resourceAliases;
+
+    /**
+     * 是否定制了自己的类加载器
+     */
     private boolean _ownClassLoader=false;
+
+    /**
+     * 配置发现
+     */
     private boolean _configurationDiscovered=false;
+
+    /**
+     * 是不是允许重名的fragment文件
+     */
     private boolean _allowDuplicateFragmentNames = false;
+
+    /**
+     * 在启动时异常是否终止服务
+     */
     private boolean _throwUnavailableOnStartupException = false;
-    
 
+    /**
+     * 元信息
+     */
+    private MetaData _metadata = new MetaData();
 
-    private MetaData _metadata=new MetaData();
-
-    public static WebAppContext getCurrentWebAppContext()
-    {
-        ContextHandler.Context context=ContextHandler.getCurrentContext();
-        if (context!=null)
-        {
+    /**
+     * 获取当前的web应用上下文
+     *
+     * @return
+     */
+    public static WebAppContext getCurrentWebAppContext() {
+        ContextHandler.Context context = ContextHandler.getCurrentContext();
+        if (context!=null) {
             ContextHandler handler = context.getContextHandler();
-            if (handler instanceof WebAppContext)
+            if (handler instanceof WebAppContext) {
                 return (WebAppContext)handler;
+            }
         }
         return null;
     }
 
     /* ------------------------------------------------------------ */
-    public WebAppContext()
-    {
+
+    /**
+     * 构造方法
+     */
+    public WebAppContext() {
         this(null,null,null,null,null,new ErrorPageErrorHandler(),SESSIONS|SECURITY);
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 构造方法
+     *
      * @param contextPath The context path
      * @param webApp The URL or filename of the webapp directory or war file.
      */
-    public WebAppContext(String webApp,String contextPath)
-    {
+    public WebAppContext(String webApp,String contextPath) {
         this(null,contextPath,null,null,null,new ErrorPageErrorHandler(),SESSIONS|SECURITY);
         setWar(webApp);
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 构造方法
+     *
      * @param contextPath The context path
      * @param webApp The URL or filename of the webapp directory or war file.
      */
-    public WebAppContext(Resource webApp, String contextPath)
-    {
+    public WebAppContext(Resource webApp, String contextPath) {
         this(null,contextPath,null,null,null,new ErrorPageErrorHandler(),SESSIONS|SECURITY);
         setWarResource(webApp);
     }
     
     /* ------------------------------------------------------------ */
     /**
+     * 构造方法
+     *
      * @param parent The parent HandlerContainer.
      * @param contextPath The context path
      * @param webApp The URL or filename of the webapp directory or war file.
      */
-    public WebAppContext(HandlerContainer parent, String webApp, String contextPath)
-    {
+    public WebAppContext(HandlerContainer parent, String webApp, String contextPath) {
         this(parent,contextPath,null,null,null,new ErrorPageErrorHandler(),SESSIONS|SECURITY);
         setWar(webApp);
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 构造方法
+     *
      * @param parent The parent HandlerContainer.
      * @param contextPath The context path
      * @param webApp The webapp directory or war file.
      */
-    public WebAppContext(HandlerContainer parent, Resource webApp, String contextPath)
-    {
+    public WebAppContext(HandlerContainer parent, Resource webApp, String contextPath) {
         this(parent,contextPath,null,null,null,new ErrorPageErrorHandler(),SESSIONS|SECURITY);
         setWarResource(webApp);
     }
@@ -262,20 +402,24 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
     /**
      * This constructor is used in the geronimo integration.
      *
+     * 构造方法
+     *
      * @param sessionHandler SessionHandler for this web app
      * @param securityHandler SecurityHandler for this web app
      * @param servletHandler ServletHandler for this web app
      * @param errorHandler ErrorHandler for this web app
      */
-    public WebAppContext(SessionHandler sessionHandler, SecurityHandler securityHandler, ServletHandler servletHandler, ErrorHandler errorHandler) 
-    {
+    public WebAppContext(SessionHandler sessionHandler, SecurityHandler securityHandler,
+                         ServletHandler servletHandler, ErrorHandler errorHandler) {
         this(null, null, sessionHandler, securityHandler, servletHandler, errorHandler,0);
     }
 
     /* ------------------------------------------------------------ */
     /**
      * This constructor is used in the geronimo integration.
-     * 
+     *
+     * 构造方法
+     *
      * @param parent the parent handler 
      * @param contextPath the context path
      * @param sessionHandler SessionHandler for this web app
@@ -284,8 +428,9 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * @param errorHandler ErrorHandler for this web app
      * @param options the options ({@link ServletContextHandler#SESSIONS} and/or {@link ServletContextHandler#SECURITY}) 
      */
-    public WebAppContext(HandlerContainer parent, String contextPath, SessionHandler sessionHandler, SecurityHandler securityHandler, ServletHandler servletHandler, ErrorHandler errorHandler,int options) 
-    {
+    public WebAppContext(HandlerContainer parent, String contextPath, SessionHandler sessionHandler,
+                         SecurityHandler securityHandler, ServletHandler servletHandler,
+                         ErrorHandler errorHandler,int options) {
         super(parent, contextPath,sessionHandler, securityHandler, servletHandler, errorHandler,options);
         _scontext = new Context();
         setErrorHandler(errorHandler != null ? errorHandler : new ErrorPageErrorHandler());
@@ -294,23 +439,28 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
 
     /* ------------------------------------------------------------ */
     /**
+     * 设置展示名
+     * 这里给类加载器设置了名称
+     *
      * @param servletContextName The servletContextName to set.
      */
     @Override
-    public void setDisplayName(String servletContextName)
-    {
+    public void setDisplayName(String servletContextName) {
         super.setDisplayName(servletContextName);
         ClassLoader cl = getClassLoader();
-        if (cl!=null && cl instanceof WebAppClassLoader && servletContextName!=null)
+        if (cl != null && cl instanceof WebAppClassLoader && servletContextName!=null) {
             ((WebAppClassLoader)cl).setName(servletContextName);
+        }
     }
 
     /* ------------------------------------------------------------ */
     /** Get an exception that caused the webapp to be unavailable
+     *
+     * 获取不可用异常
+     *
      * @return A throwable if the webapp is unavailable or null
      */
-    public Throwable getUnavailableException()
-    {
+    public Throwable getUnavailableException() {
         return _unavailableException;
     }
 
@@ -321,105 +471,142 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * Resource aliases map resource uri's within a context.
      * They may optionally be used by a handler when looking for
      * a resource.
+     *
+     * 获取资源别名
+     * 它在获取资源的时候比较有用
+     *
      * @param alias the alias for a resource
      * @param uri the uri for the resource
      */
-    public void setResourceAlias(String alias, String uri)
-    {
-        if (_resourceAliases == null)
-            _resourceAliases= new HashMap<String, String>(5);
+    public void setResourceAlias(String alias, String uri) {
+        if (_resourceAliases == null) {
+            _resourceAliases = new HashMap<String, String>(5);
+        }
         _resourceAliases.put(alias, uri);
     }
 
     /* ------------------------------------------------------------ */
-    public Map<String, String> getResourceAliases()
-    {
-        if (_resourceAliases == null)
+
+    /**
+     * 获取所有的资源别名
+     *
+     * @return
+     */
+    public Map<String, String> getResourceAliases() {
+        if (_resourceAliases == null) {
             return null;
+        }
         return _resourceAliases;
     }
 
     /* ------------------------------------------------------------ */
-    public void setResourceAliases(Map<String, String> map)
-    {
+
+    /**
+     * 设置资源别名映射
+     *
+     * @param map
+     */
+    public void setResourceAliases(Map<String, String> map) {
         _resourceAliases = map;
     }
 
     /* ------------------------------------------------------------ */
-    public String getResourceAlias(String path)
-    {
-        if (_resourceAliases == null)
+
+    /**
+     * 获取某个路径的资源别名
+     *
+     * @param path
+     * @return
+     */
+    public String getResourceAlias(String path) {
+        if (_resourceAliases == null) {
             return null;
+        }
         String alias = _resourceAliases.get(path);
 
-        int slash=path.length();
-        while (alias==null)
-        {
-            slash=path.lastIndexOf("/",slash-1);
-            if (slash<0)
+        int slash = path.length();
+        while (alias == null) {
+            slash = path.lastIndexOf("/",slash-1);
+            if (slash < 0) {
                 break;
+            }
             String match=_resourceAliases.get(path.substring(0,slash+1));
-            if (match!=null)
+            if (match!=null) {
                 alias=match+path.substring(slash+1);
+            }
         }
         return alias;
     }
 
     /* ------------------------------------------------------------ */
-    public String removeResourceAlias(String alias)
-    {
-        if (_resourceAliases == null)
+
+    /**
+     * 移除资源别名
+     *
+     * @param alias
+     * @return
+     */
+    public String removeResourceAlias(String alias) {
+        if (_resourceAliases == null) {
             return null;
+        }
         return _resourceAliases.remove(alias);
     }
 
     /* ------------------------------------------------------------ */
-    /* (non-Javadoc)
-     * @see org.eclipse.jetty.server.server.handler.ContextHandler#setClassLoader(java.lang.ClassLoader)
+    /**
+     * 设置类加载器
      */
     @Override
-    public void setClassLoader(ClassLoader classLoader)
-    {
+    public void setClassLoader(ClassLoader classLoader) {
         super.setClassLoader(classLoader);
 
         String name = getDisplayName();
-        if (name==null) 
-            name=getContextPath();
+        if (name == null) {
+            name = getContextPath();
+        }
         
-        if (classLoader!=null && classLoader instanceof WebAppClassLoader && getDisplayName()!=null)
+        if (classLoader!=null && classLoader instanceof WebAppClassLoader && getDisplayName()!=null) {
             ((WebAppClassLoader)classLoader).setName(name);
+        }
     }
 
     /* ------------------------------------------------------------ */
+
+    /**
+     * 获取资源
+     *
+     * @param uriInContext
+     * @return
+     * @throws MalformedURLException
+     */
     @Override
-    public Resource getResource(String uriInContext) throws MalformedURLException
-    {
-        if (uriInContext==null || !uriInContext.startsWith(URIUtil.SLASH))
+    public Resource getResource(String uriInContext) throws MalformedURLException {
+        if (uriInContext==null || !uriInContext.startsWith(URIUtil.SLASH)) {
             throw new MalformedURLException(uriInContext);
+        }
 
         IOException ioe= null;
         Resource resource= null;
         int loop=0;
-        while (uriInContext!=null && loop++<100)
-        {
-            try
-            {
+        while (uriInContext!=null && loop++<100) {
+            try {
                 resource= super.getResource(uriInContext);
-                if (resource != null && resource.exists())
+                if (resource != null && resource.exists()) {
                     return resource;
+                }
 
                 uriInContext = getResourceAlias(uriInContext);
-            }
-            catch (IOException e)
-            {
+            } catch (IOException e) {
                 LOG.ignore(e);
                 if (ioe==null)
                     ioe= e;
             }
         }
 
-        if (ioe != null && ioe instanceof MalformedURLException)
+        if (ioe != null && ioe instanceof MalformedURLException) {
             throw (MalformedURLException)ioe;
+        }
 
         return resource;
     }
@@ -428,10 +615,11 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
     /* ------------------------------------------------------------ */
     /** Is the context Automatically configured.
      *
+     * 获取是否自动发现配置
+     *
      * @return true if configuration discovery.
      */
-    public boolean isConfigurationDiscovered()
-    {
+    public boolean isConfigurationDiscovered() {
         return _configurationDiscovered;
     }
 
@@ -443,10 +631,12 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * <li>Web Fragments</li>
      * <li>META-INF/resource directories</li>
      * </ul>
+     *
+     * 设置自动发现
+     *
      * @param discovered true if configuration discovery is enabled for automatic configuration from the context
      */
-    public void setConfigurationDiscovered(boolean discovered)
-    {
+    public void setConfigurationDiscovered(boolean discovered) {
         _configurationDiscovered = discovered;
     }
 
@@ -465,10 +655,12 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * <li>Calls the {@link Configuration#preConfigure(WebAppContext)} method of all
      * Configuration instances.
      * </ul>
+     *
+     * 预配置
+     *
      * @throws Exception if unable to pre configure
      */
-    public void preConfigure() throws Exception
-    {
+    public void preConfigure() throws Exception {
         // Setup configurations
         loadConfigurations();
 
@@ -480,64 +672,66 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
 
         // Configure classloader
         _ownClassLoader=false;
-        if (getClassLoader()==null)
-        {
+        if (getClassLoader()==null) {
             WebAppClassLoader classLoader = new WebAppClassLoader(this);
             setClassLoader(classLoader);
             _ownClassLoader=true;
         }
 
-        if (LOG.isDebugEnabled())
-        {
+        if (LOG.isDebugEnabled()) {
             ClassLoader loader = getClassLoader();
             LOG.debug("Thread Context classloader {}",loader);
             loader=loader.getParent();
-            while(loader!=null)
-            {
+            while(loader!=null) {
                 LOG.debug("Parent class loader: {} ",loader);
                 loader=loader.getParent();
             }
         }
 
         // Prepare for configuration
-        for (Configuration configuration : _configurations)
-        {
+        for (Configuration configuration : _configurations) {
             LOG.debug("preConfigure {} with {}",this,configuration);
             configuration.preConfigure(this);
         }
     }
 
     /* ------------------------------------------------------------ */
-    public void configure() throws Exception
-    {
+
+    /**
+     * 配置
+     *
+     * @throws Exception
+     */
+    public void configure() throws Exception {
         // Configure webapp
-        for (Configuration configuration : _configurations)
-        {
+        for (Configuration configuration : _configurations) {
             LOG.debug("configure {} with {}",this,configuration);
             configuration.configure(this);
         }
     }
 
     /* ------------------------------------------------------------ */
-    public void postConfigure() throws Exception
-    {
+
+    /**
+     * 配置的后置调用
+     *
+     * @throws Exception
+     */
+    public void postConfigure() throws Exception {
         // Clean up after configuration
-        for (Configuration configuration : _configurations)
-        {
+        for (Configuration configuration : _configurations) {
             LOG.debug("postConfigure {} with {}",this,configuration);
             configuration.postConfigure(this);
         }
     }
 
     /* ------------------------------------------------------------ */
-    /*
-     * @see org.eclipse.thread.AbstractLifeCycle#doStart()
+    /**
+     * 启动
      */
     @Override
-    protected void doStart() throws Exception
-    {
-        try
-        {
+    protected void doStart() throws Exception {
+        try {
             _metadata.setAllowDuplicateFragmentNames(isAllowDuplicateFragmentNames());
             Boolean validate = (Boolean)getAttribute(MetaData.VALIDATE_XML);
             _metadata.setValidateXml((validate!=null && validate.booleanValue()));
@@ -545,11 +739,10 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
             super.doStart();
             postConfigure();
 
-            if (isLogUrlOnStart())
+            if (isLogUrlOnStart()) {
                 dumpUrl();
-        }
-        catch (Exception e)
-        {
+            }
+        } catch (Exception e) {
             //start up of the webapp context failed, make sure it is not started
             LOG.warn("Failed startup of context "+this, e);
             _unavailableException=e;
@@ -560,31 +753,28 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
     }
 
     /* ------------------------------------------------------------ */
-    /*
-     * @see org.eclipse.thread.AbstractLifeCycle#doStop()
+    /**
+     * 结束
      */
     @Override
-    protected void doStop() throws Exception
-    {
+    protected void doStop() throws Exception {
         super.doStop();
     }
 
     /* ------------------------------------------------------------ */
+
+    /**
+     * 销毁
+     */
     @Override
-    public void destroy()
-    {
+    public void destroy() {
         // Prepare for configuration
         MultiException mx=new MultiException();
-        if (_configurations!=null)
-        {
-            for (int i=_configurations.size();i-->0;)
-            {
-                try
-                {
+        if (_configurations!=null) {
+            for (int i=_configurations.size();i-->0;) {
+                try {
                     _configurations.get(i).destroy(this);
-                }
-                catch(Exception e)
-                {
+                } catch(Exception e) {
                     mx.add(e);
                 }
             }
@@ -596,17 +786,19 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
 
 
     /* ------------------------------------------------------------ */
-    /*
+    /**
      * Dumps the current web app name and URL to the log
+     *
+     * 打印url信息到日志
+     * 可以通过 setLogUrlOnStart()方法来配置
      */
-    private void dumpUrl()
-    {
+    private void dumpUrl() {
         Connector[] connectors = getServer().getConnectors();
-        for (int i=0;i<connectors.length;i++)
-        {
+        for (int i=0;i<connectors.length;i++) {
             String displayName = getDisplayName();
-            if (displayName == null)
+            if (displayName == null) {
                 displayName = "WebApp@"+connectors.hashCode();
+            }
 
             LOG.info(displayName + " at http://" + connectors[i].toString() + getContextPath());
         }
@@ -614,119 +806,138 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
 
     /* ------------------------------------------------------------ */
     /**
+     * 获取所有的配置类
+     *
      * @return Returns the configurations.
      */
     @ManagedAttribute(value="configuration classes used to configure webapp", readonly=true)
-    public String[] getConfigurationClasses()
-    {
+    public String[] getConfigurationClasses() {
         return _configurationClasses.toArray(new String[_configurationClasses.size()]);
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 获取配置
+     *
      * @return Returns the configurations.
      */
-    public Configuration[] getConfigurations()
-    {
+    public Configuration[] getConfigurations() {
         return _configurations.toArray(new Configuration[_configurations.size()]);
     }
 
     /* ------------------------------------------------------------ */
     /**
      * The default descriptor is a web.xml format file that is applied to the context before the standard WEB-INF/web.xml
+     *
+     * 获取默认的描述符
+     *
      * @return Returns the defaultsDescriptor.
      */
     @ManagedAttribute(value="default web.xml deascriptor applied before standard web.xml", readonly=true)
-    public String getDefaultsDescriptor()
-    {
+    public String getDefaultsDescriptor() {
         return _defaultsDescriptor;
     }
 
     /* ------------------------------------------------------------ */
     /**
      * The override descriptor is a web.xml format file that is applied to the context after the standard WEB-INF/web.xml
+     *
+     * 获取覆盖描述符
+     *
      * @return Returns the Override Descriptor.
      */
-    public String getOverrideDescriptor()
-    {
-        if (_overrideDescriptors.size()!=1)
+    public String getOverrideDescriptor() {
+        if (_overrideDescriptors.size() != 1) {
             return null;
+        }
         return _overrideDescriptors.get(0);
     }
 
     /* ------------------------------------------------------------ */
     /**
      * An override descriptor is a web.xml format file that is applied to the context after the standard WEB-INF/web.xml
+     *
+     * 获取所有的覆盖描述符
+     *
      * @return Returns the Override Descriptor list
      */
     @ManagedAttribute(value="web.xml deascriptors applied after standard web.xml", readonly=true)
-    public List<String> getOverrideDescriptors()
-    {
+    public List<String> getOverrideDescriptors() {
         return Collections.unmodifiableList(_overrideDescriptors);
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 获取权限
+     *
      * @return Returns the permissions.
      */
     @Override
-    public PermissionCollection getPermissions()
-    {
+    public PermissionCollection getPermissions() {
         return _permissions;
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 获取服务级别的类列表
+     *
      * @see #setServerClasses(String[])
      * @return Returns the serverClasses.
      */
     @ManagedAttribute(value="classes and packages hidden by the context classloader", readonly=true)
-    public String[] getServerClasses()
-    {
-        if (_serverClasses == null)
+    public String[] getServerClasses() {
+        if (_serverClasses == null) {
             loadServerClasses();
+        }
 
         return _serverClasses.getPatterns();
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 获取服务器级别的类模式
+     *
      * @return The ClasspathPattern used to match Server (hidden) classes
      */
-    public ClasspathPattern getServerClasspathPattern()
-    {
-        if (_serverClasses == null)
+    public ClasspathPattern getServerClasspathPattern() {
+        if (_serverClasses == null) {
             loadServerClasses();
+        }
 
         return _serverClasses;
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 添加服务类
+     * 以废弃
+     *
      * @deprecated Use {@link #getServerClasspathPattern()}.{@link ClasspathPattern#add(String)}
      * @param classOrPackageOrLocation pattern (see {@link ClasspathPattern}
      */
     @Deprecated
-    public void addServerClass(String classOrPackageOrLocation)
-    {
-        if (_serverClasses == null)
+    public void addServerClass(String classOrPackageOrLocation) {
+        if (_serverClasses == null) {
             loadServerClasses();
+        }
 
         _serverClasses.add(classOrPackageOrLocation);
     }
 
     /* ------------------------------------------------------------ */
     /** Prepend to the list of Server classes.
+     *
+     *
      * @param classOrPackage A pattern.
      * @see #setServerClasses(String[])
      * @see <a href="http://www.eclipse.org/jetty/documentation/current/jetty-classloading.html">Jetty Documentation: Classloading</a>
      * @deprecated Use {@link #getServerClasspathPattern()}.{@link ClasspathPattern#add(String)}
      */
     @Deprecated
-    public void prependServerClass(String classOrPackage)
-    {
-        if (_serverClasses == null)
+    public void prependServerClass(String classOrPackage) {
+        if (_serverClasses == null) {
             loadServerClasses();
+        }
 
         _serverClasses.add(classOrPackage);
     }
@@ -1021,17 +1232,25 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
     }
 
     /* ------------------------------------------------------------ */
-    protected void loadConfigurations()
-        throws Exception
-    {
+
+    /**
+     * 加载配置
+     *
+     * @throws Exception
+     */
+    protected void loadConfigurations() throws Exception {
         //if the configuration instances have been set explicitly, use them
-        if (_configurations.size()>0)
+        // 如果已经进行了配置，则退出
+        if (_configurations.size()>0) {
             return;
+        }
         
-        if (_configurationClasses.size()==0)
+        if (_configurationClasses.size()==0) {
             _configurationClasses.addAll(Configuration.ClassList.serverDefault(getServer()));
-        for (String configClass : _configurationClasses)
+        }
+        for (String configClass : _configurationClasses) {
             _configurations.add((Configuration)Loader.loadClass(configClass).newInstance());
+        }
     }
 
     /* ------------------------------------------------------------ */
@@ -1092,31 +1311,41 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
         _configurations.clear();
     }
 
-    public void setConfigurationClasses(List<String> configurations)
-    {
+    /**
+     * 设置配置类
+     *
+     * @param configurations
+     */
+    public void setConfigurationClasses(List<String> configurations) {
         setConfigurationClasses(configurations.toArray(new String[configurations.size()]));
     }
     
     /* ------------------------------------------------------------ */
     /**
+     * 设置配置数组
+     *
      * @param configurations The configurations to set.
      */
-    public void setConfigurations(Configuration[] configurations)
-    {
-        if (isStarted())
+    public void setConfigurations(Configuration[] configurations) {
+        // 启动后不允许配置
+        if (isStarted()) {
             throw new IllegalStateException();
+        }
         _configurations.clear();
-        if (configurations!=null)
+        if (configurations!=null) {
             _configurations.addAll(Arrays.asList(configurations));
+        }
     }
 
     /* ------------------------------------------------------------ */
     /**
      * The default descriptor is a web.xml format file that is applied to the context before the standard WEB-INF/web.xml
+     *
+     * 设置默认的描述文件
+     *
      * @param defaultsDescriptor The defaultsDescriptor to set.
      */
-    public void setDefaultsDescriptor(String defaultsDescriptor)
-    {
+    public void setDefaultsDescriptor(String defaultsDescriptor) {
         _defaultsDescriptor = defaultsDescriptor;
     }
 
@@ -1125,8 +1354,7 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * The override descriptor is a web.xml format file that is applied to the context after the standard WEB-INF/web.xml
      * @param overrideDescriptor The overrideDescritpor to set.
      */
-    public void setOverrideDescriptor(String overrideDescriptor)
-    {
+    public void setOverrideDescriptor(String overrideDescriptor) {
         _overrideDescriptors.clear();
         _overrideDescriptors.add(overrideDescriptor);
     }
@@ -1136,8 +1364,7 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * The override descriptor is a web.xml format file that is applied to the context after the standard WEB-INF/web.xml
      * @param overrideDescriptors The overrideDescriptors (file or URL) to set.
      */
-    public void setOverrideDescriptors(List<String> overrideDescriptors)
-    {
+    public void setOverrideDescriptors(List<String> overrideDescriptors) {
         _overrideDescriptors.clear();
         _overrideDescriptors.addAll(overrideDescriptors);
     }
@@ -1147,81 +1374,96 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * The override descriptor is a web.xml format file that is applied to the context after the standard WEB-INF/web.xml
      * @param overrideDescriptor The overrideDescriptor (file or URL) to add.
      */
-    public void addOverrideDescriptor(String overrideDescriptor)
-    {
+    public void addOverrideDescriptor(String overrideDescriptor) {
         _overrideDescriptors.add(overrideDescriptor);
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 获取描述文件
+     *
      * @return the web.xml descriptor to use. If set to null, WEB-INF/web.xml is used if it exists.
      */
     @ManagedAttribute(value="standard web.xml descriptor", readonly=true)
-    public String getDescriptor()
-    {
+    public String getDescriptor() {
         return _descriptor;
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 设置描述文件
+     * 如果为空的话，使用 WEB-INF/web.xml 文件
+     *
      * @param descriptor the web.xml descriptor to use. If set to null, WEB-INF/web.xml is used if it exists.
      */
-    public void setDescriptor(String descriptor)
-    {
-        _descriptor=descriptor;
+    public void setDescriptor(String descriptor) {
+        _descriptor = descriptor;
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 设置是否是分布式的
+     *
      * @param distributable The distributable to set.
      */
-    public void setDistributable(boolean distributable)
-    {
+    public void setDistributable(boolean distributable) {
         this._distributable = distributable;
     }
 
     /* ------------------------------------------------------------ */
-    @Override
-    public void setEventListeners(EventListener[] eventListeners)
-    {
-        if (_sessionHandler!=null)
-            _sessionHandler.clearEventListeners();
 
+    /**
+     * 设置事件监听
+     *
+     * @param eventListeners
+     *            the event listeners
+     */
+    @Override
+    public void setEventListeners(EventListener[] eventListeners) {
+        if (_sessionHandler != null) {
+            _sessionHandler.clearEventListeners();
+        }
         super.setEventListeners(eventListeners);
     }
 
     /* ------------------------------------------------------------ */
     /** Add EventListener
      * Convenience method that calls {@link #setEventListeners(EventListener[])}
+     *
+     * 添加事件监听
+     *
      * @param listener the listener to add
      */
     @Override
-    public void addEventListener(EventListener listener)
-    {
+    public void addEventListener(EventListener listener) {
         super.addEventListener(listener);
         if ((listener instanceof HttpSessionActivationListener)
             || (listener instanceof HttpSessionAttributeListener)
             || (listener instanceof HttpSessionBindingListener)
             || (listener instanceof HttpSessionListener)
-            || (listener instanceof HttpSessionIdListener))
-        {
-            if (_sessionHandler!=null)
+            || (listener instanceof HttpSessionIdListener)) {
+            if (_sessionHandler!=null) {
                 _sessionHandler.addEventListener(listener);
+            }
         }
     }
-    
+
+    /**
+     * 移除事件监听
+     *
+     * @param listener the event listener to remove
+     */
     @Override
-    public void removeEventListener(EventListener listener)
-    {
+    public void removeEventListener(EventListener listener) {
         super.removeEventListener(listener);
         if ((listener instanceof HttpSessionActivationListener)
             || (listener instanceof HttpSessionAttributeListener)
             || (listener instanceof HttpSessionBindingListener)
             || (listener instanceof HttpSessionListener)
-            || (listener instanceof HttpSessionIdListener))
-        {
-            if (_sessionHandler!=null)
+            || (listener instanceof HttpSessionIdListener)) {
+            if (_sessionHandler!=null) {
                 _sessionHandler.removeEventListener(listener);
+            }
         }
         
     }
@@ -1229,28 +1471,32 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
 
     /* ------------------------------------------------------------ */
     /**
+     * 设置是否提取war包
+     * 即把.war文件拆成目录
+     *
      * @param extractWAR True if war files are extracted
      */
-    public void setExtractWAR(boolean extractWAR)
-    {
+    public void setExtractWAR(boolean extractWAR) {
         _extractWAR = extractWAR;
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 设置是否拷贝目录
+     *
      * @param copy True if the webdir is copied (to allow hot replacement of jars)
      */
-    public void setCopyWebDir(boolean copy)
-    {
+    public void setCopyWebDir(boolean copy) {
         _copyDir = copy;
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 设置是否拷贝web-inf目录
+     *
      * @param copyWebInf True if the web-inf lib and classes directories are copied (to allow hot replacement of jars on windows)
      */
-    public void setCopyWebInf(boolean copyWebInf)
-    {
+    public void setCopyWebInf(boolean copyWebInf) {
         _copyWebInf = copyWebInf;
     }
 
@@ -1262,17 +1508,17 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * spec recommendation).  Default is false or can be set by the system 
      * property org.eclipse.jetty.server.webapp.parentLoaderPriority
      */
-    public void setParentLoaderPriority(boolean java2compliant)
-    {
+    public void setParentLoaderPriority(boolean java2compliant) {
         _parentLoaderPriority = java2compliant;
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 设置权限
+     *
      * @param permissions The permissions to set.
      */
-    public void setPermissions(PermissionCollection permissions)
-    {
+    public void setPermissions(PermissionCollection permissions) {
         _permissions = permissions;
     }
 
@@ -1283,11 +1529,12 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * when you may not fully trust the webapp.  Setting this white list will enable a
      * check when a servlet called {@link org.eclipse.jetty.servlet.ServletContextHandler.Context#getContext(String)}, validating that the uriInPath
      * for the given webapp has been declaratively allows access to the context.
-     * 
+     *
+     * 设置上下文白名单
+     *
      * @param contextWhiteList the whitelist of contexts for {@link org.eclipse.jetty.servlet.ServletContextHandler.Context#getContext(String)} 
      */
-    public void setContextWhiteList(String[] contextWhiteList)
-    {
+    public void setContextWhiteList(String[] contextWhiteList) {
         _contextWhiteList = contextWhiteList;
     }
 
@@ -1299,10 +1546,15 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * from the context.  If the context needs to load these classes, it must have its
      * own copy of them in WEB-INF/lib or WEB-INF/classes.
      * A {@link ClasspathPattern} is used to match the server classes.
+     *
+     * 设置Server类模式
+     * 这些都是用来实现服务器本身的类
+     * 它们对上下文是隐藏的
+     * 如果上下文需要使用这些类，他们必须在它们自己的WEB-INF/lib或者WEB-INF/classes目录中存在这些类
+     *
      * @param serverClasses The serverClasses to set.
      */
-    public void setServerClasses(String[] serverClasses)
-    {
+    public void setServerClasses(String[] serverClasses) {
         _serverClasses = new ClasspathPattern(serverClasses);
     }
 
@@ -1314,10 +1566,13 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * cannot be replaced by classes of the same name from WEB-INF,
      * regardless of the value of {@link #setParentLoaderPriority(boolean)}.
      * A {@link ClasspathPattern} is used to match the system classes.
+     *
+     * 设置系统类
+     * 系统类被JVM提供，因此他们不会被WEB-INF下的类所替代
+     *
      * @param systemClasses The systemClasses to set.
      */
-    public void setSystemClasses(String[] systemClasses)
-    {
+    public void setSystemClasses(String[] systemClasses) {
         _systemClasses = new ClasspathPattern(systemClasses);
     }
 
@@ -1325,17 +1580,24 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
     /* ------------------------------------------------------------ */
     /** Set temporary directory for context.
      * The javax.servlet.context.tempdir attribute is also set.
+     *
+     * 设置临时目录
+     * javax.servlet.context.tempdir属性也是设置的这个值
+     *
      * @param dir Writable temporary directory.
      */
-    public void setTempDirectory(File dir)
-    {
-        if (isStarted())
+    public void setTempDirectory(File dir) {
+        // 启动后不允许设置
+        if (isStarted()) {
             throw new IllegalStateException("Started");
+        }
 
-        if (dir!=null)
-        {
-            try{dir=new File(dir.getCanonicalPath());}
-            catch (IOException e){LOG.warn(Log.EXCEPTION,e);}
+        if (dir!=null) {
+            try{
+                dir = new File(dir.getCanonicalPath());
+            } catch (IOException e) {
+                LOG.warn(Log.EXCEPTION,e);
+            }
         }
 
         _tmpDir=dir;
@@ -1343,9 +1605,14 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
     }
 
     /* ------------------------------------------------------------ */
+
+    /**
+     * 获取临时目录
+     *
+     * @return
+     */
     @ManagedAttribute(value="temporary directory location", readonly=true)
-    public File getTempDirectory ()
-    {
+    public File getTempDirectory () {
         return _tmpDir;
     }
 
@@ -1353,19 +1620,21 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * If true the temp directory for this 
      * webapp will be kept when the webapp stops. Otherwise,
      * it will be deleted.
+     *
+     * 设置永久的临时目录
      * 
      * @param persist true to persist the temp directory on shutdown / exit of the webapp
      */
-    public void setPersistTempDirectory(boolean persist)
-    {
+    public void setPersistTempDirectory(boolean persist) {
         _persistTmpDir = persist;
     }
     
     /**
+     * 是否是永久的临时目录
+     *
      * @return true if tmp directory will persist between startups of the webapp
      */
-    public boolean isPersistTempDirectory()
-    {
+    public boolean isPersistTempDirectory() {
         return _persistTmpDir;
     }
     
@@ -1375,51 +1644,62 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
      * Set the war of the webapp. From this value a {@link #setResourceBase(String)}
      * value is computed by {@link WebInfConfiguration}, which may be changed from
      * the war URI by unpacking and/or copying.
+     *
+     * 设置war包的地址
+     *
      * @param war The war to set as a file name or URL.
      */
-    public void setWar(String war)
-    {
+    public void setWar(String war) {
         _war = war;
     }
 
     /* ------------------------------------------------------------ */
     /**
-     * Set the war of the webapp as a {@link Resource}. 
+     * Set the war of the webapp as a {@link Resource}.
+     *
+     * 用设置资源的方式设置war包
+     *
      * @see #setWar(String)
      * @param war The war to set as a Resource.
      */
-    public void setWarResource(Resource war)
-    {
+    public void setWarResource(Resource war) {
         setWar(war==null?null:war.toString());
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 获取额外的类路径
+     *
      * @return Comma or semicolon separated path of filenames or URLs
      * pointing to directories or jar files. Directories should end
      * with '/'.
      */
     @Override
     @ManagedAttribute(value="extra classpath for context classloader", readonly=true)
-    public String getExtraClasspath()
-    {
+    public String getExtraClasspath() {
         return _extraClasspath;
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 设置额外的类路径
+     *
      * @param extraClasspath Comma or semicolon separated path of filenames or URLs
      * pointing to directories or jar files. Directories should end
      * with '/'.
      */
-    public void setExtraClasspath(String extraClasspath)
-    {
+    public void setExtraClasspath(String extraClasspath) {
         _extraClasspath=extraClasspath;
     }
 
     /* ------------------------------------------------------------ */
-    public boolean isLogUrlOnStart()
-    {
+
+    /**
+     * 获取启动时记录url
+     *
+     * @return
+     */
+    public boolean isLogUrlOnStart() {
         return _logUrlOnStart;
     }
 
@@ -1427,47 +1707,79 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
     /**
      * Sets whether or not the web app name and URL is logged on startup
      *
+     * 设置启动时记录url
+     *
      * @param logOnStart whether or not the log message is created
      */
-    public void setLogUrlOnStart(boolean logOnStart)
-    {
+    public void setLogUrlOnStart(boolean logOnStart) {
         this._logUrlOnStart = logOnStart;
     }
 
     /* ------------------------------------------------------------ */
+
+    /**
+     * 设置服务器类
+     *
+     * @param server
+     */
     @Override
-    public void setServer(Server server)
-    {
+    public void setServer(Server server) {
         super.setServer(server);
     }
 
     /* ------------------------------------------------------------ */
-    public boolean isAllowDuplicateFragmentNames()
-    {
+
+    /**
+     * 设置是否允许fragment重复
+     *
+     * @return
+     */
+    public boolean isAllowDuplicateFragmentNames() {
         return _allowDuplicateFragmentNames;
     }
 
     /* ------------------------------------------------------------ */
-    public void setAllowDuplicateFragmentNames(boolean allowDuplicateFragmentNames)
-    {
+
+    /**
+     * 设置是否允许重复的fragment名称
+     *
+     * @param allowDuplicateFragmentNames
+     */
+    public void setAllowDuplicateFragmentNames(boolean allowDuplicateFragmentNames) {
         _allowDuplicateFragmentNames = allowDuplicateFragmentNames;
     }
 
     /* ------------------------------------------------------------ */
+
+    /**
+     * 设置是否在启动异常的时候是否抛出不可用
+     *
+     * @param throwIfStartupException
+     */
     public void setThrowUnavailableOnStartupException (boolean throwIfStartupException) {
         _throwUnavailableOnStartupException = throwIfStartupException;
     }
 
     /* ------------------------------------------------------------ */
+
+    /**
+     * 获取是否在在启动异常的时候抛出不可用
+     *
+     * @return
+     */
     public boolean isThrowUnavailableOnStartupException () {
         return _throwUnavailableOnStartupException;
     }
 
     /* ------------------------------------------------------------ */
+
+    /**
+     * 启动上下文
+     *
+     * @throws Exception
+     */
     @Override
-    protected void startContext()
-        throws Exception
-    {
+    protected void startContext() throws Exception {
         configure();
 
         //resolve the metadata
@@ -1478,27 +1790,31 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
     
     
     /* ------------------------------------------------------------ */
-    @Override
-    protected void stopContext() throws Exception
-    {
-        stopWebapp();
-        try
-        {
-            for (int i=_configurations.size();i-->0;)
-                _configurations.get(i).deconfigure(this);
 
-            if (_metadata != null)
+    /**
+     * 结束上下文
+     *
+     * @throws Exception
+     */
+    @Override
+    protected void stopContext() throws Exception {
+        stopWebapp();
+        try {
+            for (int i = _configurations.size();i-- > 0;) {
+                _configurations.get(i).deconfigure(this);
+            }
+
+            if (_metadata != null) {
                 _metadata.clear();
+            }
             _metadata=new MetaData();
 
-        }
-        finally
-        {
-            if (_ownClassLoader)
-            {
+        } finally {
+            if (_ownClassLoader) {
                 ClassLoader loader = getClassLoader();
-                if (loader != null && loader instanceof URLClassLoader)
-                    ((URLClassLoader)loader).close(); 
+                if (loader != null && loader instanceof URLClassLoader) {
+                    ((URLClassLoader)loader).close();
+                }
                 setClassLoader(null);
             }
 
@@ -1508,55 +1824,65 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
     }
 
     /* ------------------------------------------------------------ */
-    protected void startWebapp()
-        throws Exception
-    {
+
+    /**
+     * 启动web应用
+     *
+     * @throws Exception
+     */
+    protected void startWebapp() throws Exception {
         super.startContext();
     }
     
     /* ------------------------------------------------------------ */
-    protected void stopWebapp() throws Exception
-    {
+
+    /**
+     * 结束web应用
+     *
+     * @throws Exception
+     */
+    protected void stopWebapp() throws Exception {
         super.stopContext();
     }
-    /* ------------------------------------------------------------ */    
+    /* ------------------------------------------------------------ */
+
+    /**
+     *
+     * @param registration ServletRegistration.Dynamic instance that setServletSecurity was called on
+     * @param servletSecurityElement new security info
+     * @return
+     */
     @Override
-    public Set<String> setServletSecurity(Dynamic registration, ServletSecurityElement servletSecurityElement)
-    {
+    public Set<String> setServletSecurity(Dynamic registration, ServletSecurityElement servletSecurityElement) {
         Set<String> unchangedURLMappings = new HashSet<String>();
         //From javadoc for ServletSecurityElement:
-        /*
-        If a URL pattern of this ServletRegistration is an exact target of a security-constraint that 
-        was established via the portable deployment descriptor, then this method does not change the 
-        security-constraint for that pattern, and the pattern will be included in the return value.
+        // If a URL pattern of this ServletRegistration is an exact target of a security-constraint that
+        // was established via the portable deployment descriptor, then this method does not change the
+        // security-constraint for that pattern, and the pattern will be included in the return value.
 
-        If a URL pattern of this ServletRegistration is an exact target of a security constraint 
-        that was established via the ServletSecurity annotation or a previous call to this method, 
-        then this method replaces the security constraint for that pattern.
+        // If a URL pattern of this ServletRegistration is an exact target of a security constraint
+        // that was established via the ServletSecurity annotation or a previous call to this method,
+        // then this method replaces the security constraint for that pattern.
 
-        If a URL pattern of this ServletRegistration is neither the exact target of a security constraint 
-        that was established via the ServletSecurity annotation or a previous call to this method, 
-        nor the exact target of a security-constraint in the portable deployment descriptor, then 
-        this method establishes the security constraint for that pattern from the argument ServletSecurityElement. 
-         */
+        // If a URL pattern of this ServletRegistration is neither the exact target of a security constraint
+        // that was established via the ServletSecurity annotation or a previous call to this method,
+        // nor the exact target of a security-constraint in the portable deployment descriptor, then
+        // this method establishes the security constraint for that pattern from the argument ServletSecurityElement.
 
         Collection<String> pathMappings = registration.getMappings();
-        if (pathMappings != null)
-        {
+        if (pathMappings != null) {
             ConstraintSecurityHandler.createConstraint(registration.getName(), servletSecurityElement);
 
-            for (String pathSpec:pathMappings)
-            {
+            for (String pathSpec:pathMappings) {
                 Origin origin = getMetaData().getOrigin("constraint.url."+pathSpec);
                
-                switch (origin)
-                {
-                    case NotSet:
-                    {
+                switch (origin) {
+                    case NotSet: {
                         //No mapping for this url already established
                         List<ConstraintMapping> mappings = ConstraintSecurityHandler.createConstraintsWithMappingsForPath(registration.getName(), pathSpec, servletSecurityElement);
-                        for (ConstraintMapping m:mappings)
+                        for (ConstraintMapping m:mappings) {
                             ((ConstraintAware)getSecurityHandler()).addConstraintMapping(m);
+                        }
                         ((ConstraintAware)getSecurityHandler()).checkPathsWithUncoveredHttpMethods();
                         getMetaData().setOriginAPI("constraint.url."+pathSpec);
                         break;
@@ -1564,15 +1890,13 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
                     case WebXml:
                     case WebDefaults:
                     case WebOverride:
-                    case WebFragment:
-                    {
+                    case WebFragment: {
                         //a mapping for this url was created in a descriptor, which overrides everything
                         unchangedURLMappings.add(pathSpec);
                         break;
                     }
                     case Annotation:
-                    case API:
-                    {
+                    case API: {
                         //mapping established via an annotation or by previous call to this method,
                         //replace the security constraint for this pattern
                         List<ConstraintMapping> constraintMappings = ConstraintSecurityHandler.removeConstraintMappingsForPath(pathSpec, ((ConstraintAware)getSecurityHandler()).getConstraintMappings());
@@ -1594,50 +1918,62 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
 
 
     /* ------------------------------------------------------------ */
-    public class Context extends ServletContextHandler.Context
-    {
+
+    /**
+     * 上下文
+     */
+    public class Context extends ServletContextHandler.Context {
        
         /* ------------------------------------------------------------ */
+
+        /**
+         * 检测监听器
+         *
+         * @param listener
+         * @throws IllegalStateException
+         */
         @Override
-        public void checkListener(Class<? extends EventListener> listener) throws IllegalStateException
-        {
-            try
-            {
+        public void checkListener(Class<? extends EventListener> listener) throws IllegalStateException {
+            try {
                 super.checkListener(listener);
-            }
-            catch (IllegalArgumentException e)
-            {
+            } catch (IllegalArgumentException e) {
                 //not one of the standard servlet listeners, check our extended session listener types
                 boolean ok = false;
-                for (Class<?> l:SessionHandler.SESSION_LISTENER_TYPES)
-                {
-                    if (l.isAssignableFrom(listener))
-                    {
+                for (Class<?> l:SessionHandler.SESSION_LISTENER_TYPES) {
+                    if (l.isAssignableFrom(listener)) {
                         ok = true;
                         break;
                     }
                 }
-                if (!ok)
+                if (!ok) {
                     throw new IllegalArgumentException("Inappropriate listener type "+listener.getName());
+                }
             }
         }
 
         /* ------------------------------------------------------------ */
+
+        /**
+         * 获取资源
+         *
+         * @param path
+         * @return
+         * @throws MalformedURLException
+         */
         @Override
-        public URL getResource(String path) throws MalformedURLException
-        {
+        public URL getResource(String path) throws MalformedURLException {
             Resource resource=WebAppContext.this.getResource(path);
-            if (resource==null || !resource.exists())
+            if (resource==null || !resource.exists()) {
                 return null;
+            }
 
             // Should we go to the original war?
-            if (resource.isDirectory() && resource instanceof ResourceCollection && !WebAppContext.this.isExtractWAR())
-            {
+            if (resource.isDirectory() && resource instanceof ResourceCollection && !WebAppContext.this.isExtractWAR()) {
                 Resource[] resources = ((ResourceCollection)resource).getResources();
-                for (int i=resources.length;i-->0;)
-                {
-                    if (resources[i].getName().startsWith("jar:file"))
+                for (int i=resources.length;i-->0;) {
+                    if (resources[i].getName().startsWith("jar:file")) {
                         return resources[i].getURI().toURL();
+                    }
                 }
             }
 
@@ -1645,56 +1981,69 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
         }
 
         /* ------------------------------------------------------------ */
+
+        /**
+         * 获取上下文
+         *
+         * @param uripath
+         * @return
+         */
         @Override
-        public ServletContext getContext(String uripath)
-        {
+        public ServletContext getContext(String uripath) {
             ServletContext servletContext = super.getContext(uripath);
 
-            if ( servletContext != null && _contextWhiteList != null )
-            {
-                for ( String context : _contextWhiteList )
-                {
-                    if ( context.equals(uripath) )
-                    {
+            if ( servletContext != null && _contextWhiteList != null ) {
+                for ( String context : _contextWhiteList ) {
+                    if ( context.equals(uripath) ) {
                         return servletContext;
                     }
                 }
 
                 return null;
-            }
-            else
-            {
+            } else {
                 return servletContext;
             }
         }
     }
 
     /* ------------------------------------------------------------ */
-    public MetaData getMetaData()
-    {
+
+    /**
+     * 获取元信息
+     *
+     * @return
+     */
+    public MetaData getMetaData() {
         return _metadata;
     }
 
     /* ------------------------------------------------------------ */
-    public static void addServerClasses(Server server,String... pattern )
-    {
-        if (pattern == null || pattern.length == 0)
+
+    /**
+     * 添加服务器类
+     *
+     * @param server
+     * @param pattern
+     */
+    public static void addServerClasses(Server server,String... pattern ) {
+        if (pattern == null || pattern.length == 0) {
             return;
+        }
         
         // look for a Server attribute with the list of Server classes
-        // to apply to every web application. If not present, use our defaults.        
+        // to apply to every web application. If not present, use our defaults.
         Object o = server.getAttribute(SERVER_SRV_CLASSES);
-        if (o instanceof ClasspathPattern)
-        {
+        if (o instanceof ClasspathPattern) {
             ((ClasspathPattern)o).add(pattern);
             return;
         }
         
         String[] server_classes;
-        if (o instanceof String[])
+        if (o instanceof String[]) {
             server_classes = (String[])o;
-        else
+        } else {
             server_classes = __dftServerClasses;
+        }
         int l = server_classes.length;
         server_classes = Arrays.copyOf(server_classes,l+pattern.length);
         System.arraycopy(pattern,0,server_classes,l,pattern.length);
@@ -1702,25 +2051,37 @@ public class WebAppContext extends ServletContextHandler implements WebAppClassL
     }
 
     /* ------------------------------------------------------------ */
-    public static void addSystemClasses(Server server,String... pattern )
-    {
-        if (pattern == null || pattern.length == 0)
+
+    /**
+     * 添加系统类
+     * 这里不要忘记修改Server类的系统类属性
+     *
+     * @param server
+     * @param pattern
+     */
+    public static void addSystemClasses(Server server,String... pattern ) {
+        if (pattern == null || pattern.length == 0) {
             return;
+        }
         
         // look for a Server attribute with the list of System classes
         // to apply to every web application. If not present, use our defaults.
         Object o = server.getAttribute(SERVER_SYS_CLASSES);
-        if (o instanceof ClasspathPattern)
-        {
+
+        // 如果是模式的方式，添加
+        if (o instanceof ClasspathPattern) {
             ((ClasspathPattern)o).add(pattern);
             return;
         }
         
         String[] system_classes;
-        if (o instanceof String[])
+        if (o instanceof String[]) {
+            // 如果是数组的方式，则替换
             system_classes = (String[])o;
-        else
+        } else {
+            // 如果不是的话，则使用默认的类
             system_classes = __dftSystemClasses;
+        }
         int l = system_classes.length;
         system_classes = Arrays.copyOf(system_classes,l+pattern.length);
         System.arraycopy(pattern,0,system_classes,l,pattern.length);
