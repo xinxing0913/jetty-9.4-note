@@ -27,64 +27,77 @@ import org.eclipse.jetty.util.resource.Resource;
  * FragmentConfiguration
  * <p>
  * Process web-fragments in jars
+ *
+ * 碎片配置
  */
-public class FragmentConfiguration extends AbstractConfiguration
-{
+public class FragmentConfiguration extends AbstractConfiguration {
+
+    /**
+     * 属性
+     */
     public final static String FRAGMENT_RESOURCES="org.eclipse.jetty.webFragments";
 
+    /**
+     * 在配置之前
+     *
+     * @param context The context to configure
+     * @throws Exception
+     */
     @Override
-    public void preConfigure(WebAppContext context) throws Exception
-    {
+    public void preConfigure(WebAppContext context) throws Exception {
         //add all discovered web-fragment.xmls
         addWebFragments(context, context.getMetaData());
     }
 
 
+    /**
+     * 在配置之后
+     *
+     * @param context The context to configure
+     * @throws Exception
+     */
     @Override
-    public void postConfigure(WebAppContext context) throws Exception
-    {
+    public void postConfigure(WebAppContext context) throws Exception {
         context.setAttribute(FRAGMENT_RESOURCES, null);
     }
     
     /* ------------------------------------------------------------------------------- */
     /**
      * Add in fragment descriptors that have already been discovered by MetaInfConfiguration
-     * 
+     *
+     * 添加碎片
+     *
      * @param context the web app context to look in
      * @param metaData the metadata to populate with fragments
      * 
      * @throws Exception if unable to find web fragments
      * @deprecated
      */
-    public void findWebFragments (final WebAppContext context, final MetaData metaData)
-    throws Exception
-    {
+    public void findWebFragments (final WebAppContext context, final MetaData metaData) throws Exception {
         addWebFragments(context, metaData);
     }
     
     /* ------------------------------------------------------------------------------- */
     /**
      * Add in fragment descriptors that have already been discovered by MetaInfConfiguration
-     * 
+     *
+     * 添加碎片
+     *
      * @param context the web app context to look in
      * @param metaData the metadata to populate with fragments
      * 
      * @throws Exception if unable to find web fragments
      */
-    public void addWebFragments (final WebAppContext context, final MetaData metaData) throws Exception
-    {
+    public void addWebFragments (final WebAppContext context, final MetaData metaData) throws Exception {
         @SuppressWarnings("unchecked")
         Map<Resource, Resource> frags = (Map<Resource,Resource>)context.getAttribute(FRAGMENT_RESOURCES);
-        if (frags!=null)
-        {
-            for (Resource key : frags.keySet())
-            {
-                if (key.isDirectory()) //tolerate the case where the library is a directory, not a jar. useful for OSGi for example
-                {
+        if (frags!=null) {
+            for (Resource key : frags.keySet()) {
+                if (key.isDirectory())  {
+                    //tolerate the case where the library is a directory, not a jar. useful for OSGi for example
                     metaData.addFragment(key, frags.get(key));                          
-                }
-                else //the standard case: a jar most likely inside WEB-INF/lib
-                {
+                } else {
+                    //the standard case: a jar most likely inside WEB-INF/lib
                     metaData.addFragment(key, frags.get(key));
                 }
             }
