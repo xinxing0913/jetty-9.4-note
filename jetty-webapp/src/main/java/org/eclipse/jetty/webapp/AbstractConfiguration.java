@@ -18,29 +18,64 @@
 
 package org.eclipse.jetty.webapp;
 
-public class AbstractConfiguration implements Configuration
-{
-    public void preConfigure(WebAppContext context) throws Exception
-    {
+/**
+ * 抽象配置
+ * 提供的都是空实现
+ */
+public class AbstractConfiguration implements Configuration {
+
+    /**
+     * 配置前
+     *
+     * @param context The context to configure
+     * @throws Exception
+     */
+    public void preConfigure(WebAppContext context) throws Exception {
     }
 
-    public void configure(WebAppContext context) throws Exception
-    {
+    /**
+     * 执行配置
+     *
+     * @param context The context to configure
+     * @throws Exception
+     */
+    public void configure(WebAppContext context) throws Exception {
     }
 
-    public void postConfigure(WebAppContext context) throws Exception
-    {
+    /**
+     * 配置后
+     *
+     * @param context The context to configure
+     * @throws Exception
+     */
+    public void postConfigure(WebAppContext context) throws Exception {
     }
 
-    public void deconfigure(WebAppContext context) throws Exception
-    {
+    /**
+     * 清空配置
+     *
+     * @param context The context to configure
+     * @throws Exception
+     */
+    public void deconfigure(WebAppContext context) throws Exception {
     }
 
-    public void destroy(WebAppContext context) throws Exception
-    {
+    /**
+     * 销毁
+     *
+     * @param context The context to configure
+     * @throws Exception
+     */
+    public void destroy(WebAppContext context) throws Exception {
     }
 
-    public void cloneConfigure(WebAppContext template, WebAppContext context) throws Exception
-    {
+    /**
+     * 克隆配置
+     *
+     * @param template The template context
+     * @param context The context to configure
+     * @throws Exception
+     */
+    public void cloneConfigure(WebAppContext template, WebAppContext context) throws Exception {
     }
 }
