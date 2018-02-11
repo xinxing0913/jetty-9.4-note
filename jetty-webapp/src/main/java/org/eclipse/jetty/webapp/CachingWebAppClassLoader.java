@@ -34,49 +34,76 @@ import org.eclipse.jetty.util.log.Logger;
  * Specifically this ClassLoader caches not found classes and resources,
  * which can greatly increase performance for applications that search 
  * for resources.
+ *
+ * 基于缓存的类加载器
+ * 它是把找到的和找不到的都存起来，这样下次再寻找的时候可以直接使用
+ * 但是也要注意实际场景，可能会导致一些bug
+ * 如果场景正确的话，它可以大幅度提升性能
  */
 @ManagedObject
-public class CachingWebAppClassLoader extends WebAppClassLoader
-{
+public class CachingWebAppClassLoader extends WebAppClassLoader {
+    /**
+     * 日志类
+     */
     private static final Logger LOG = Log.getLogger(CachingWebAppClassLoader.class);
-    
+
+    /**
+     * 未找到的列表
+     */
     private final Set<String> _notFound = ConcurrentHashMap.newKeySet();
+
+    /**
+     * 缓存
+     */
     private final ConcurrentHashMap<String,URL> _cache = new ConcurrentHashMap<>();
-    
-    public CachingWebAppClassLoader(ClassLoader parent, Context context) throws IOException
-    {
+
+    /**
+     * 构造方法
+     *
+     * @param parent
+     * @param context
+     * @throws IOException
+     */
+    public CachingWebAppClassLoader(ClassLoader parent, Context context) throws IOException {
         super(parent,context);
     }
 
-    public CachingWebAppClassLoader(Context context) throws IOException
-    {
+    /**
+     * 构造方法
+     *
+     * @param context
+     * @throws IOException
+     */
+    public CachingWebAppClassLoader(Context context) throws IOException {
         super(context);
     }
 
+    /**
+     * 获取资源
+     *
+     * @param name
+     * @return
+     */
     @Override
-    public URL getResource(String name)
-    {
-        if (_notFound.contains(name))
-        {
-            if (LOG.isDebugEnabled())
+    public URL getResource(String name) {
+        if (_notFound.contains(name)) {
+            if (LOG.isDebugEnabled()) {
                 LOG.debug("Not found cache hit resource {}",name);
+            }
             return null;
         }
         
         URL url = _cache.get(name);
         
-        if (name==null)
-        {
+        if (name==null) {
             url = super.getResource(name);
         
-            if (url==null)
-            {
-                if (LOG.isDebugEnabled())
+            if (url==null) {
+                if (LOG.isDebugEnabled()) {
                     LOG.debug("Caching not found resource {}",name);
+                }
                 _notFound.add(name);
-            }
-            else
-            {
+            } else {
                 _cache.putIfAbsent(name,url);
             }
         }
@@ -84,41 +111,50 @@ public class CachingWebAppClassLoader extends WebAppClassLoader
         return url;
     }
 
+    /**
+     * 加载类
+     *
+     * @param name
+     * @return
+     * @throws ClassNotFoundException
+     */
     @Override
-    public Class<?> loadClass(String name) throws ClassNotFoundException
-    {
-        if (_notFound.contains(name))
-        {
-            if (LOG.isDebugEnabled())
+    public Class<?> loadClass(String name) throws ClassNotFoundException {
+        if (_notFound.contains(name)) {
+            if (LOG.isDebugEnabled()) {
                 LOG.debug("Not found cache hit resource {}",name);
+            }
             throw new ClassNotFoundException(name+": in notfound cache");
         }
-        try
-        {
+        try {
             return super.loadClass(name);
-        }
-        catch (ClassNotFoundException nfe)
-        {
-            if (_notFound.add(name))
-                if (LOG.isDebugEnabled())
-                {
+        } catch (ClassNotFoundException nfe) {
+            if (_notFound.add(name)) {
+                if (LOG.isDebugEnabled()) {
                     LOG.debug("Caching not found {}",name);
                     LOG.debug(nfe);
                 }
+            }
             throw nfe; 
         }
     }
 
+    /**
+     * 清空缓存
+     */
     @ManagedOperation
-    public void clearCache()
-    {
+    public void clearCache() {
         _cache.clear();
         _notFound.clear();
     }
-    
+
+    /**
+     * 转换为字符串
+     *
+     * @return
+     */
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "Caching["+super.toString()+"]";
     }
 }
