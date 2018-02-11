@@ -18,27 +18,48 @@
 
 package org.eclipse.jetty.webapp;
 
-public class CloneConfiguration extends AbstractConfiguration
-{
+/**
+ * 克隆配置
+ */
+public class CloneConfiguration extends AbstractConfiguration {
+
+    /**
+     * 模板配置
+     */
     final WebAppContext _template;
-    
-    CloneConfiguration(WebAppContext template)
-    {
+
+    /**
+     * 构造方法
+     *
+     * @param template
+     */
+    CloneConfiguration(WebAppContext template) {
         _template=template;
     }
-    
+
+    /**
+     * 配置
+     *
+     * @param context The context to configure
+     * @throws Exception
+     */
     @Override
-    public void configure(WebAppContext context) throws Exception
-    {
-        for (Configuration configuration : _template.getConfigurations())
+    public void configure(WebAppContext context) throws Exception {
+        for (Configuration configuration : _template.getConfigurations()) {
             configuration.cloneConfigure(_template,context);
+        }
     }
 
-
+    /**
+     * 清空配置
+     *
+     * @param context The context to configure
+     * @throws Exception
+     */
     @Override
-    public void deconfigure(WebAppContext context) throws Exception
-    {
-        for (Configuration configuration : _template.getConfigurations())
+    public void deconfigure(WebAppContext context) throws Exception {
+        for (Configuration configuration : _template.getConfigurations()) {
             configuration.deconfigure(context);
+        }
     }
 }
