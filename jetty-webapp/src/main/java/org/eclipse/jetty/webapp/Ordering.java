@@ -24,8 +24,19 @@ import org.eclipse.jetty.util.resource.Resource;
 
 /**
  * Ordering options for jars in WEB-INF lib.
+ *
+ * 顺序
+ * 主要分为两个:
+ * 1.绝对顺序
+ * 2.相对顺序
  */
-public interface Ordering
-{  
+public interface Ordering {
+
+    /**
+     * 排序
+     *
+     * @param fragments
+     * @return
+     */
     public List<Resource> order(List<Resource> fragments); 
 }
