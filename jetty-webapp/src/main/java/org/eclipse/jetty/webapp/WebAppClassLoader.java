@@ -63,6 +63,10 @@ import org.eclipse.jetty.util.resource.ResourceCollection;
  * If no parent class loader is provided, then the current thread 
  * context classloader will be used.  If that is null then the 
  * classloader that loaded this class is used as the parent.
+ *
+ * Web应用类加载器
+ * 如果没有父类加载器，那么会使用当前线程上下文中的类加载器
+ * 如果这个也为空的话，那么会使用当前类的加载器作为它的父类加载器
  */
 public class WebAppClassLoader extends URLClassLoader {
 
