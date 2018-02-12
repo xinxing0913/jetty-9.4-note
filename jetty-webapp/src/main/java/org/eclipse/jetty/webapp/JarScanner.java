@@ -43,11 +43,22 @@ import org.eclipse.jetty.util.resource.Resource;
  * Subclasses should implement the processEntry(URL jarUrl, JarEntry entry)
  * method to handle entries in jar files whose names match the supplied 
  * pattern.
+ *
+ * jar包扫描
  */
-public abstract class JarScanner extends org.eclipse.jetty.util.PatternMatcher
-{
+public abstract class JarScanner extends org.eclipse.jetty.util.PatternMatcher {
+
+    /**
+     * 日志类
+     */
     private static final Logger LOG = Log.getLogger(JarScanner.class);
 
+    /**
+     * 执行
+     *
+     * @param jarUri
+     * @param entry
+     */
     public abstract void processEntry (URI jarUri, JarEntry entry);
     
     /**
@@ -72,14 +83,14 @@ public abstract class JarScanner extends org.eclipse.jetty.util.PatternMatcher
      * Will iterate over the jar names, matching
      * all those starting with "aaa-" first, then "bbb-".
      *
+     * 扫描
+     *
      * @param pattern the pattern to use for jar matching
      * @param uris the uris of the jars to scan
      * @param isNullInclusive if true, an empty pattern means all names match, if false, none match
      * @throws Exception if unable to scan
      */
-    public void scan (Pattern pattern, URI[] uris, boolean isNullInclusive)
-    throws Exception
-    {
+    public void scan (Pattern pattern, URI[] uris, boolean isNullInclusive) throws Exception {
        super.match(pattern, uris, isNullInclusive);
     }
     
@@ -108,6 +119,8 @@ public abstract class JarScanner extends org.eclipse.jetty.util.PatternMatcher
      * If visitParent is true, then the pattern is applied to the
      * parent loader hierarchy. If false, it is only applied to the
      * classloader passed in.
+     *
+     * 扫描
      * 
      * @param pattern the pattern to use for jar matching
      * @param loader the class loader to look for jars in
@@ -115,54 +128,52 @@ public abstract class JarScanner extends org.eclipse.jetty.util.PatternMatcher
      * @param visitParent if true, visit parent classloaders too
      * @throws Exception if unable to scan
      */
-    public void scan (Pattern pattern, ClassLoader loader, boolean isNullInclusive, boolean visitParent)
-    throws Exception
-    {
-        while (loader!=null)
-        {
-            if (loader instanceof URLClassLoader)
-            {
+    public void scan (Pattern pattern, ClassLoader loader, boolean isNullInclusive, boolean visitParent) throws Exception {
+        while (loader != null) {
+            if (loader instanceof URLClassLoader) {
                 URL[] urls = ((URLClassLoader)loader).getURLs();
-                if (urls != null)
-                {
+                if (urls != null) {
                     URI[] uris = new URI[urls.length];
                     int i=0;
-                    for (URL u : urls)
+                    for (URL u : urls) {
                         uris[i++] = u.toURI();
+                    }
                     scan (pattern, uris, isNullInclusive);
                 }
             }     
-            if (visitParent)
+            if (visitParent) {
                 loader=loader.getParent();
-            else
+            } else {
                 loader = null;
+            }
         }  
     }
-    
-    
-    public void matched (URI uri)
-    throws Exception
-    {
+
+    /**
+     * 依次执行处理
+     *
+     * @param uri
+     * @throws Exception
+     */
+    public void matched (URI uri) throws Exception {
         LOG.debug("Search of {}",uri);
-        if (uri.toString().toLowerCase(Locale.ENGLISH).endsWith(".jar"))
-        {
+
+        // 首先确保后缀名为.jar
+        if (uri.toString().toLowerCase(Locale.ENGLISH).endsWith(".jar")) {
          
             InputStream in = Resource.newResource(uri).getInputStream();
-            if (in==null)
+            if (in == null) {
                 return;
+            }
 
             JarInputStream jar_in = new JarInputStream(in);
-            try
-            { 
+            try {
                 JarEntry entry = jar_in.getNextJarEntry();
-                while (entry!=null)
-                {
+                while (entry!=null) {
                     processEntry(uri, entry);
                     entry = jar_in.getNextJarEntry();
                 }
-            }
-            finally
-            {
+            } finally {
                 jar_in.close();
             }   
         }
