@@ -36,47 +36,99 @@ import org.xml.sax.InputSource;
  * Descriptor
  *
  * A web descriptor (web.xml/web-defaults.xml/web-overrides.xml).
+ *
+ * web描述文件
+ * 它是对如下文件的统一管理:
+ * 1. web.xml
+ * 2. web-defaults.xml
+ * 3. web-overrides.xml
  */
-public class WebDescriptor extends Descriptor
-{
+public class WebDescriptor extends Descriptor {
+
+    /**
+     * 日志类
+     */
     private static final Logger LOG = Log.getLogger(WebDescriptor.class);
 
+    /**
+     * xml解析器
+     */
     protected static XmlParser _nonValidatingStaticParser;
+
+    /**
+     * 元信息完成情况，并不是所有的应用都有元信息
+     */
     protected MetaDataComplete _metaDataComplete;
+
+    /**
+     * 默认主版本号
+     */
     protected int _majorVersion = 3; //default to container version
+
+    /**
+     * 默认次版本号
+     */
     protected int _minorVersion = 0;
+
+    /**
+     * 类名列表
+     */
     protected ArrayList<String> _classNames = new ArrayList<String>();
+
+    /**
+     * 是不是分布式的
+     */
     protected boolean _distributable;
 
+    /**
+     * 是不是支持排序
+     */
     protected boolean _isOrdered = false;
+
+    /**
+     * 顺序
+     */
     protected List<String> _ordering = new ArrayList<String>();
 
+    /**
+     * 确保解析
+     *
+     *
+     * @return
+     * @throws ClassNotFoundException
+     */
     @Override
-    public XmlParser ensureParser() throws ClassNotFoundException
-    {
-        synchronized (WebDescriptor.class)
-        {
-            if (_nonValidatingStaticParser == null)
+    public XmlParser ensureParser() throws ClassNotFoundException {
+        synchronized (WebDescriptor.class) {
+            if (_nonValidatingStaticParser == null) {
                 _nonValidatingStaticParser = newParser(false);
+            }
         }
         
-        if (!isValidating())
+        if (!isValidating()) {
             return _nonValidatingStaticParser;
-        else
+        } else {
             return newParser(true);
+        }
     }
 
-    public static XmlParser newParser(boolean validating) throws ClassNotFoundException
-    {
-        XmlParser xmlParser=new XmlParser(validating)
-        {
+    /**
+     * 新建一个解析器
+     *
+     * @param validating
+     * @return
+     * @throws ClassNotFoundException
+     */
+    public static XmlParser newParser(boolean validating) throws ClassNotFoundException {
+        /**
+         * 新建一个xml解析类的实例
+         */
+        XmlParser xmlParser=new XmlParser(validating) {
             boolean mapped=false;
             
             @Override
-            protected InputSource resolveEntity(String pid, String sid)
-            {
-                if (!mapped)
-                {
+            protected InputSource resolveEntity(String pid, String sid) {
+                if (!mapped) {
                     mapResources();
                     mapped=true;
                 }
@@ -84,8 +136,7 @@ public class WebDescriptor extends Descriptor
                 return is;
             }
             
-            void mapResources()
-            {
+            void mapResources() {
                 //set up cache of DTDs and schemas locally
                 URL dtd22=Loader.getResource("javax/servlet/resources/web-app_2_2.dtd");
                 URL dtd23=Loader.getResource("javax/servlet/resources/web-app_2_3.dtd");
@@ -118,20 +169,15 @@ public class WebDescriptor extends Descriptor
                 URL jsp22xsd = null;
                 URL jsp23xsd = null;
 
-                try
-                {
+                try {
                     //try both javax/servlet/resources and javax/servlet/jsp/resources to load 
                     jsp20xsd = Loader.getResource("javax/servlet/resources/jsp_2_0.xsd");
                     jsp21xsd = Loader.getResource("javax/servlet/resources/jsp_2_1.xsd");
                     jsp22xsd = Loader.getResource("javax/servlet/resources/jsp_2_2.xsd");
                     jsp23xsd = Loader.getResource("javax/servlet/resources/jsp_2_3.xsd");
-                }
-                catch (Exception e)
-                {
+                } catch (Exception e) {
                     LOG.ignore(e);
-                }
-                finally
-                {
+                } finally {
                     if (jsp20xsd == null) jsp20xsd = Loader.getResource("javax/servlet/jsp/resources/jsp_2_0.xsd");
                     if (jsp21xsd == null) jsp21xsd = Loader.getResource("javax/servlet/jsp/resources/jsp_2_1.xsd");
                     if (jsp22xsd == null) jsp22xsd = Loader.getResource("javax/servlet/jsp/resources/jsp_2_2.xsd");
@@ -199,83 +245,99 @@ public class WebDescriptor extends Descriptor
         return xmlParser;
     }
 
-
-    public WebDescriptor (Resource xml)
-    {
+    /**
+     * 构造方法
+     *
+     * @param xml
+     */
+    public WebDescriptor (Resource xml) {
         super(xml);
     }
 
-    public void parse ()
-    throws Exception
-    {
+    /**
+     * 解析
+     *
+     * @throws Exception
+     */
+    public void parse () throws Exception {
         super.parse();
         processVersion();
         processOrdering();
     }
 
-    public MetaDataComplete getMetaDataComplete()
-    {
+    /**
+     * 获取元信息完成情况
+     *
+     * @return
+     */
+    public MetaDataComplete getMetaDataComplete() {
         return _metaDataComplete;
     }
 
-
-
-    public int getMajorVersion ()
-    {
+    /**
+     * 获取主版本号
+     *
+     * @return
+     */
+    public int getMajorVersion () {
         return _majorVersion;
     }
 
-    public int getMinorVersion()
-    {
+    /**
+     * 获取次版本号
+     *
+     * @return
+     */
+    public int getMinorVersion() {
         return _minorVersion;
     }
 
-
-    public void processVersion ()
-    {
+    /**
+     * 处理版本号
+     */
+    public void processVersion () {
         String version = _root.getAttribute("version", "DTD");
-        if ("DTD".equals(version))
-        {
+        if ("DTD".equals(version)) {
             _majorVersion = 2;
             _minorVersion = 3;
 
-            if (_dtd != null && _dtd.indexOf("web-app_2_2") >= 0)
-            {
+            if (_dtd != null && _dtd.indexOf("web-app_2_2") >= 0) {
                 _majorVersion = 2;
                 _minorVersion = 2;
             }
-        }
-        else
-        {
+        } else {
            int dot = version.indexOf(".");
-           if (dot > 0)
-           {
+           if (dot > 0) {
                _majorVersion = Integer.parseInt(version.substring(0,dot));
                _minorVersion = Integer.parseInt(version.substring(dot+1));
            }
         }
 
-        if (_majorVersion <= 2 && _minorVersion < 5)
+        if (_majorVersion <= 2 && _minorVersion < 5) {
             _metaDataComplete = MetaDataComplete.True; // does not apply before 2.5
-        else
-        {
+        } else {
             String s = (String)_root.getAttribute("metadata-complete");
-            if (s == null)
+            if (s == null) {
                 _metaDataComplete = MetaDataComplete.NotSet;
-            else
+            } else {
                 _metaDataComplete = Boolean.valueOf(s).booleanValue()?MetaDataComplete.True:MetaDataComplete.False;
+            }
         }
 
-        if (LOG.isDebugEnabled())
+        if (LOG.isDebugEnabled()) {
             LOG.debug(_xml.toString()+": Calculated metadatacomplete = " + _metaDataComplete + " with version=" + version);
+        }
     }
 
-    public void processOrdering ()
-    {
+    /**
+     * 处理顺序
+     */
+    public void processOrdering () {
         //Process the web.xml's optional <absolute-ordering> element
         XmlParser.Node ordering = _root.get("absolute-ordering");
-        if (ordering == null)
-           return;
+        if (ordering == null) {
+            return;
+        }
 
         _isOrdered = true;
         //If an absolute-ordering was already set, then ignore it in favor of this new one
@@ -283,59 +345,94 @@ public class WebDescriptor extends Descriptor
 
         Iterator<Object> iter = ordering.iterator();
         XmlParser.Node node = null;
-        while (iter.hasNext())
-        {
+        while (iter.hasNext()) {
             Object o = iter.next();
-            if (!(o instanceof XmlParser.Node)) continue;
+            if (!(o instanceof XmlParser.Node)) {
+                continue;
+            }
             node = (XmlParser.Node) o;
 
-            if (node.getTag().equalsIgnoreCase("others"))
+            if (node.getTag().equalsIgnoreCase("others")) {
                 //((AbsoluteOrdering)_processor.getOrdering()).addOthers();
                 _ordering.add("others");
-            else if (node.getTag().equalsIgnoreCase("name"))
+            } else if (node.getTag().equalsIgnoreCase("name")) {
                 //((AbsoluteOrdering)_processor.getOrdering()).add(node.toString(false,true));
                 _ordering.add(node.toString(false,true));
+            }
         }
     }
 
-    public void addClassName (String className)
-    {
-        if (!_classNames.contains(className))
+    /**
+     * 添加类名
+     *
+     * @param className
+     */
+    public void addClassName (String className) {
+        if (!_classNames.contains(className)) {
             _classNames.add(className);
+        }
     }
 
-    public ArrayList<String> getClassNames ()
-    {
+    /**
+     * 获取所有的类名列表
+     *
+     * @return
+     */
+    public ArrayList<String> getClassNames () {
         return _classNames;
     }
 
-    public void setDistributable (boolean distributable)
-    {
+    /**
+     * 设置是否为分布式
+     *
+     * @param distributable
+     */
+    public void setDistributable (boolean distributable) {
         _distributable = distributable;
     }
 
-    public boolean isDistributable()
-    {
+    /**
+     * 获取是否为分布式
+     *
+     * @return
+     */
+    public boolean isDistributable() {
         return _distributable;
     }
 
-    public void setValidating (boolean validating)
-    {
+    /**
+     * 设置是否校验
+     *
+     * @param validating
+     */
+    public void setValidating (boolean validating) {
        _validating = validating;
     }
-    
-    public boolean isValidating ()
-    {
+
+    /**
+     * 是否校验
+     *
+     * @return
+     */
+    public boolean isValidating () {
        return _validating;
     }
 
-    public boolean isOrdered()
-    {
+    /**
+     * 获取是否排序
+     *
+     * @return
+     */
+    public boolean isOrdered() {
         return _isOrdered;
     }
 
-    public List<String> getOrdering()
-    {
+    /**
+     * 获取顺序
+     *
+     * @return
+     */
+    public List<String> getOrdering() {
         return _ordering;
     }
 
