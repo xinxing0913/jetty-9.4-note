@@ -29,47 +29,53 @@ import org.eclipse.jetty.util.resource.Resource;
 /* ------------------------------------------------------------------------------- */
 /**
  * Configure by parsing default web.xml and web.xml
- * 
+ *
+ * web.xml配置
  */
-public class WebXmlConfiguration extends AbstractConfiguration
-{
+public class WebXmlConfiguration extends AbstractConfiguration {
+
+    /**
+     * 日志类
+     */
     private static final Logger LOG = Log.getLogger(WebXmlConfiguration.class);
 
     
     /* ------------------------------------------------------------------------------- */
     /**
-     * 
+     * 配置之前的预处理
+     * 这里是把信息写入到metadata中，但是不做解析里面的内容
      */
     @Override
-    public void preConfigure (WebAppContext context) throws Exception
-    {
+    public void preConfigure (WebAppContext context) throws Exception {
         //parse webdefault.xml
+        // 首先解析默认配置
         String defaultsDescriptor = context.getDefaultsDescriptor();
-        if (defaultsDescriptor != null && defaultsDescriptor.length() > 0)
-        {
+        if (defaultsDescriptor != null && defaultsDescriptor.length() > 0) {
             Resource dftResource = Resource.newSystemResource(defaultsDescriptor);
-            if (dftResource == null) 
+            if (dftResource == null) {
                 dftResource = context.newResource(defaultsDescriptor);
+            }
             context.getMetaData().setDefaults (dftResource);
         }
         
         //parse, but don't process web.xml
+        // 解析，但是不执行配置
+        // 这里就是设置文件内容和主版本、次版本号
         Resource webxml = findWebXml(context);
-        if (webxml != null) 
-        {      
+        if (webxml != null) {
             context.getMetaData().setWebXml(webxml);
             context.getServletContext().setEffectiveMajorVersion(context.getMetaData().getWebXml().getMajorVersion());
             context.getServletContext().setEffectiveMinorVersion(context.getMetaData().getWebXml().getMinorVersion());
         }
         
         //parse but don't process override-web.xml
-        for (String overrideDescriptor : context.getOverrideDescriptors())
-        {
-            if (overrideDescriptor != null && overrideDescriptor.length() > 0)
-            {
+        // 解析，但是不执行
+        for (String overrideDescriptor : context.getOverrideDescriptors()) {
+            if (overrideDescriptor != null && overrideDescriptor.length() > 0) {
                 Resource orideResource = Resource.newSystemResource(overrideDescriptor);
-                if (orideResource == null) 
+                if (orideResource == null) {
                     orideResource = context.newResource(overrideDescriptor);
+                }
                 context.getMetaData().addOverride(orideResource);
             }
         }
@@ -78,14 +84,14 @@ public class WebXmlConfiguration extends AbstractConfiguration
     /* ------------------------------------------------------------------------------- */
     /**
      * Process web-default.xml, web.xml, override-web.xml
-     * 
+     *
+     * 执行配置
+     * 这里可以指定配置解析器
      */
     @Override
-    public void configure (WebAppContext context) throws Exception
-    {
+    public void configure (WebAppContext context) throws Exception {
         // cannot configure if the context is already started
-        if (context.isStarted())
-        {
+        if (context.isStarted()) {
             LOG.debug("Cannot configure webapp after it is started");
             return;
         }
@@ -94,37 +100,54 @@ public class WebXmlConfiguration extends AbstractConfiguration
     }
     
     /* ------------------------------------------------------------------------------- */
-    protected Resource findWebXml(WebAppContext context) throws IOException, MalformedURLException
-    {
+
+    /**
+     * 获取web.xml文件
+     *
+     * @param context
+     * @return
+     * @throws IOException
+     * @throws MalformedURLException
+     */
+    protected Resource findWebXml(WebAppContext context) throws IOException, MalformedURLException {
         String descriptor = context.getDescriptor();
-        if (descriptor != null)
-        {
+        if (descriptor != null) {
             Resource web = context.newResource(descriptor);
-            if (web.exists() && !web.isDirectory()) return web;
+            if (web.exists() && !web.isDirectory()) {
+                return web;
+            }
         }
 
         Resource web_inf = context.getWebInf();
-        if (web_inf != null && web_inf.isDirectory())
-        {
+        if (web_inf != null && web_inf.isDirectory()) {
             // do web.xml file
             Resource web = web_inf.addPath("web.xml");
-            if (web.exists()) return web;
-            if (LOG.isDebugEnabled())
+            if (web.exists()) {
+                return web;
+            }
+            if (LOG.isDebugEnabled()) {
                 LOG.debug("No WEB-INF/web.xml in " + context.getWar() + ". Serving files and default/dynamic servlets only");
+            }
         }
         return null;
     }
 
 
     /* ------------------------------------------------------------------------------- */
+
+    /**
+     * 清空配置
+     *
+     * @param context The context to configure
+     * @throws Exception
+     */
     @Override
-    public void deconfigure (WebAppContext context) throws Exception
-    {      
+    public void deconfigure (WebAppContext context) throws Exception {
         context.setWelcomeFiles(null);
 
-        if (context.getErrorHandler() instanceof ErrorPageErrorHandler)
-            ((ErrorPageErrorHandler) 
-                    context.getErrorHandler()).setErrorPages(null);
+        if (context.getErrorHandler() instanceof ErrorPageErrorHandler) {
+            ((ErrorPageErrorHandler) context.getErrorHandler()).setErrorPages(null);
+        }
 
         // TODO remove classpaths from classloader
     }
