@@ -31,71 +31,113 @@ import org.eclipse.jetty.xml.XmlParser;
  * Fragment
  *
  * A web-fragment.xml descriptor.
+ *
+ * web-fragment.xml解析器
  */
-public class FragmentDescriptor extends WebDescriptor
-{
+public class FragmentDescriptor extends WebDescriptor {
+
+    /**
+     * 没有命名的前缀
+     */
     public static final String NAMELESS = "@@-NAMELESS-@@"; //prefix for nameless Fragments
+
+    /**
+     * 个数
+     */
     protected static int _counter = 0;
 
+    /**
+     * 其他类型
+     */
     public enum OtherType {None, Before, After};
-    protected OtherType _otherType = OtherType.None;
-   
-    
-    protected List<String> _befores = new ArrayList<String>();
-    protected List<String> _afters = new ArrayList<String>();
-    protected String _name;
-    
 
-    public FragmentDescriptor (Resource xml)
-        throws Exception
-    {
+    /**
+     * 默认的其他类型
+     */
+    protected OtherType _otherType = OtherType.None;
+
+    /**
+     * 前面的列表
+     */
+    protected List<String> _befores = new ArrayList<String>();
+
+    /**
+     * 后面的列表
+     */
+    protected List<String> _afters = new ArrayList<String>();
+
+    /**
+     * 名称
+     */
+    protected String _name;
+
+    /**
+     * 构造方法
+     *
+     * @param xml
+     * @throws Exception
+     */
+    public FragmentDescriptor (Resource xml) throws Exception {
         super (xml);
     }       
-    
-    public String getName ()
-    {
+
+    /**
+     * 获取名称
+     */
+    public String getName () {
         return _name;
     }
-    
+
+    /**
+     * 解析
+     *
+     * @throws Exception
+     */
     @Override
-    public void parse () 
-        throws Exception
-    {
+    public void parse () throws Exception {
         super.parse();
         processName();
     }
-    
-    public void processName ()
-    {
+
+    /**
+     * 处理名称
+     */
+    public void processName () {
         XmlParser.Node root = getRoot();
         XmlParser.Node nameNode = root.get("name");
         _name = NAMELESS+(_counter++);
-        if (nameNode != null)
-        {
+        if (nameNode != null) {
             String tmp = nameNode.toString(false,true);
             if (tmp!=null && tmp.length()>0)
                 _name = tmp;
         }
     }
+
+    /**
+     * 处理顺序
+     */
     @Override
-    public void processOrdering ()
-    {
+    public void processOrdering () {
         //Process a fragment jar's web-fragment.xml<ordering> elements
         XmlParser.Node root = getRoot();       
         
         XmlParser.Node ordering = root.get("ordering");
-        if (ordering == null)
+        if (ordering == null) {
             return; //No ordering for this fragment
+        }
         
         _isOrdered = true;
    
         processBefores(ordering);
         processAfters(ordering);
     }
-    
-    
-    public void processBefores (XmlParser.Node ordering)
-    {
+
+    /**
+     * 处理befores
+     *
+     * @param ordering
+     */
+    public void processBefores (XmlParser.Node ordering) {
         //Process the <before> elements, looking for an <others/> clause and all of the <name> clauses
         XmlParser.Node before = ordering.get("before");
         if (before == null)
@@ -103,25 +145,28 @@ public class FragmentDescriptor extends WebDescriptor
 
         Iterator<?> iter = before.iterator();
         XmlParser.Node node = null;
-        while (iter.hasNext())
-        {
+        while (iter.hasNext()) {
             Object o = iter.next();
             if (!(o instanceof XmlParser.Node)) continue;
             node = (XmlParser.Node) o;
-            if (node.getTag().equalsIgnoreCase("others"))
-            {
-                if (_otherType != OtherType.None)
+            if (node.getTag().equalsIgnoreCase("others")) {
+                if (_otherType != OtherType.None) {
                     throw new IllegalStateException("Duplicate <other> clause detected in "+_xml.getURI());
+                }
 
                 _otherType = OtherType.Before;
-            }
-            else if (node.getTag().equalsIgnoreCase("name"))
+            } else if (node.getTag().equalsIgnoreCase("name")) {
                 _befores.add(node.toString(false,true));
+            }
         }
     }
 
-    public void processAfters (XmlParser.Node ordering)
-    {
+    /**
+     * 处理afters
+     *
+     * @param ordering
+     */
+    public void processAfters (XmlParser.Node ordering) {
         //Process the <after> elements, look for an <others/> clause and all of the <name/> clauses
         XmlParser.Node after = ordering.get("after");
         if (after == null)
@@ -129,41 +174,55 @@ public class FragmentDescriptor extends WebDescriptor
         
         Iterator<?> iter = after.iterator();
         XmlParser.Node node = null;
-        while (iter.hasNext())
-        {
+        while (iter.hasNext()) {
             Object o = iter.next();
             if (!(o instanceof XmlParser.Node)) continue;
             node = (XmlParser.Node) o;
-            if (node.getTag().equalsIgnoreCase("others"))
-            {
+            if (node.getTag().equalsIgnoreCase("others")) {
                 if (_otherType != OtherType.None)
                     throw new IllegalStateException("Duplicate <other> clause detected in "+_xml.getURI());
 
                 _otherType = OtherType.After;
 
-            }
-            else if (node.getTag().equalsIgnoreCase("name"))
+            } else if (node.getTag().equalsIgnoreCase("name")) {
                 _afters.add(node.toString(false,true));
+            }
         }
     }
-    
-    public List<String> getBefores()
-    {
+
+    /**
+     * 获取befores
+     *
+     * @return
+     */
+    public List<String> getBefores() {
         return Collections.unmodifiableList(_befores);
     }
-    
-    public List<String> getAfters()
-    {
+
+    /**
+     * 获取afters
+     *
+     * @return
+     */
+    public List<String> getAfters() {
         return Collections.unmodifiableList(_afters);
     }
-    
-    public OtherType getOtherType ()
-    {
+
+    /**
+     * 其他类型
+     *
+     * @return
+     */
+    public OtherType getOtherType () {
         return _otherType;
     }
-    
-    public List<String> getOrdering()
-    {
+
+    /**
+     * 获取顺序
+     *
+     * @return
+     */
+    public List<String> getOrdering() {
         return null; //only used for absolute-ordering in Descriptor
     }
 }
