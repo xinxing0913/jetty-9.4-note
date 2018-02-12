@@ -28,66 +28,96 @@ import org.eclipse.jetty.util.resource.Resource;
 /**
  * AbsoluteOrdering
  *
+ * 绝对顺序
  */
-public class AbsoluteOrdering implements Ordering
-{
+public class AbsoluteOrdering implements Ordering {
+
+    /**
+     * 命名，用来占位使用
+     */
     public static final String OTHER = "@@-OTHER-@@";
+
+    /**
+     * 顺序
+     */
     protected List<String> _order = new ArrayList<String>();
+
+    /**
+     * 是否有other
+     */
     protected boolean _hasOther = false;
+
+    /**
+     * 元数据
+     */
     protected MetaData _metaData;
 
-    public AbsoluteOrdering (MetaData metaData)
-    {
+    /**
+     * 构造方法
+     *
+     * @param metaData
+     */
+    public AbsoluteOrdering (MetaData metaData) {
         _metaData = metaData;
     }
-    
+
+    /**
+     * 排序
+     *
+     * @param jars
+     * @return
+     */
     @Override
-    public List<Resource> order(List<Resource> jars)
-    {           
+    public List<Resource> order(List<Resource> jars) {
         List<Resource> orderedList = new ArrayList<Resource>();
         List<Resource> tmp = new ArrayList<Resource>(jars);
       
         //1. put everything into the list of named others, and take the named ones out of there,
         //assuming we will want to use the <other> clause
+        // 先全部放到others里面
         Map<String,FragmentDescriptor> others = new HashMap<String,FragmentDescriptor>(_metaData.getNamedFragments());
         
         //2. for each name, take out of the list of others, add to tail of list
         int index = -1;
-        for (String item:_order)
-        {
-            if (!item.equals(OTHER))
-            {
+        for (String item:_order) {
+            if (!item.equals(OTHER)) {
                 FragmentDescriptor f = others.remove(item);
-                if (f != null)
-                {
+                if (f != null) {
                     Resource jar = _metaData.getJarForFragment(item);
-                    orderedList.add(jar); //take from others and put into final list in order, ignoring duplicate names
+                    orderedList.add(jar);
+                    //take from others and put into final list in order, ignoring duplicate names
                     //remove resource from list for resource matching name of descriptor
                     tmp.remove(jar);
                 }
-            }
-            else
+            } else {
                 index = orderedList.size(); //remember the index at which we want to add in all the others
+            }
         }
         
         //3. if <other> was specified, insert rest of the fragments 
-        if (_hasOther)
-        {
+        if (_hasOther) {
             orderedList.addAll((index < 0? 0: index), tmp);
         }
         
         return orderedList;
     }
-    
-    public void add (String name)
-    {
+
+    /**
+     * 添加
+     *
+     * @param name
+     */
+    public void add (String name) {
         _order.add(name); 
     }
-    
-    public void addOthers ()
-    {
-        if (_hasOther)
+
+    /**
+     * 添加others
+     */
+    public void addOthers () {
+        if (_hasOther) {
             throw new IllegalStateException ("Duplicate <other> element in absolute ordering");
+        }
         
         _hasOther = true;
         _order.add(OTHER);
