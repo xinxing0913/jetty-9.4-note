@@ -34,6 +34,10 @@ import org.eclipse.jetty.server.Request;
  * is committed or a positive response status is set.
  *
  * 处理器列表
+ * 在有如下场景的时候，它会执行结束:
+ * 1.有一个处理器已经把请求标记为处理结束
+ * 2.有一个处理器抛出了异常
+ *
  */
 public class HandlerList extends HandlerCollection {
 
