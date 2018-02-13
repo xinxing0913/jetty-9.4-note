@@ -44,6 +44,8 @@ import org.eclipse.jetty.util.annotation.ManagedObject;
  * handlers.
  *
  * 处理器集合
+ * 它会调用每一个处理器，并且是按顺序调用的
+ * 它会自己捕获对应的异常，并且不管是否有一个处理器处理结束，都会继续处理
  */
 @ManagedObject("Handler of multiple handlers")
 public class HandlerCollection extends AbstractHandlerContainer {
