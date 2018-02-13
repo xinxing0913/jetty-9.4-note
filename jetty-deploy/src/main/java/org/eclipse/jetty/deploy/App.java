@@ -23,17 +23,36 @@ import org.eclipse.jetty.util.AttributesMap;
 
 /**
  * The information about an App that is managed by the {@link DeploymentManager}
+ *
+ * 应用
  */
-public class App
-{
+public class App {
+
+    /**
+     * 部署管理器
+     */
     private final DeploymentManager _manager;
+
+    /**
+     * 应用提供器
+     */
     private final AppProvider _provider;
+
+    /**
+     * 原始的ID标记
+     */
     private final String _originId;
+
+    /**
+     * 上下文处理器
+     */
     private ContextHandler _context;
 
     /**
      * Create an App with specified Origin ID and archivePath
-     * 
+     *
+     * 构造方法
+     *
      * @param manager the deployment manager 
      * @param provider the app provider
      * @param originId
@@ -42,8 +61,7 @@ public class App
      * @see App#getOriginId()
      * @see App#getContextPath()
      */
-    public App(DeploymentManager manager, AppProvider provider, String originId)
-    {
+    public App(DeploymentManager manager, AppProvider provider, String originId) {
         _manager = manager;
         _provider = provider;
         _originId = originId;
@@ -51,7 +69,9 @@ public class App
 
     /**
      * Create an App with specified Origin ID and archivePath
-     * 
+     *
+     * 构造方法
+     *
      * @param manager the deployment manager 
      * @param provider the app provider
      * @param originId
@@ -63,23 +83,25 @@ public class App
      *            Some implementations of AppProvider might have to use an
      *            already created ContextHandler.
      */
-    public App(DeploymentManager manager, AppProvider provider, String originId, ContextHandler context)
-    {
+    public App(DeploymentManager manager, AppProvider provider, String originId, ContextHandler context) {
         this(manager,provider,originId);
         _context = context;
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 部署管理器
+     *
      * @return The deployment manager
      */
-    public DeploymentManager getDeploymentManager()
-    {
+    public DeploymentManager getDeploymentManager() {
         return _manager;
     }
 
     /* ------------------------------------------------------------ */
     /**
+     * 应用提供者
+     *
      * @return The AppProvider
      */
     public AppProvider getAppProvider()
@@ -90,23 +112,22 @@ public class App
     /* ------------------------------------------------------------ */
     /**
      * Get ContextHandler for the App.
-     * 
      * Create it if needed.
-     * 
+     *
+     * 获取上下文处理器
+     * 这里很重要的一点就是给它设置属性
+     *
      * @return the {@link ContextHandler} to use for the App when fully started.
      *         (Portions of which might be ignored when App is not yet 
      *         {@link AppLifeCycle#DEPLOYED} or {@link AppLifeCycle#STARTED})
      * @throws Exception if unable to get the context handler
      */
-    public ContextHandler getContextHandler() throws Exception
-    {
-        if (_context == null)
-        {
+    public ContextHandler getContextHandler() throws Exception {
+        if (_context == null) {
             _context = getAppProvider().createContextHandler(this);
             
             AttributesMap attributes = _manager.getContextAttributes();
-            if (attributes!=null && attributes.size()>0)
-            {
+            if (attributes!=null && attributes.size()>0) {
                 // Merge the manager attributes under the existing attributes
                 attributes = new AttributesMap(attributes);
                 attributes.addAll(_context.getAttributes());
@@ -124,12 +145,13 @@ public class App
      * NOTE that although the method name indicates that this is a unique
      * identifier, it is not, as many contexts may have the same contextPath,
      * yet different virtual hosts.
-     * 
+     *
+     * 获取上下文编号
+     *
      * @deprecated Use getContextPath instead.
      * @return the context path for the App
      */
-    public String getContextId()
-    {
+    public String getContextId() {
         return getContextPath();
     }
     
@@ -137,13 +159,13 @@ public class App
     /**
      * The context path {@link App} relating to how it is installed on the
      * jetty server side.
-     * 
+     *
+     * 获取上下文路径
+     *
      * @return the contextPath for the App
      */
-    public String getContextPath()
-    {
-        if (this._context == null)
-        {
+    public String getContextPath() {
+        if (this._context == null) {
             return null;
         }
         return this._context.getContextPath();
@@ -152,7 +174,9 @@ public class App
 
     /**
      * The origin of this {@link App} as specified by the {@link AppProvider}
-     * 
+     *
+     * 获取原始的ID
+     *
      * @return String representing the origin of this app.
      */
     public String getOriginId()
@@ -160,9 +184,13 @@ public class App
         return this._originId;
     }
 
+    /**
+     * 获取其字符串形式
+     *
+     * @return
+     */
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "App[" + _context + "," + _originId + "]";
     }
 }
