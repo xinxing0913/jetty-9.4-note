@@ -87,6 +87,7 @@ public class HandlerWrapper extends AbstractHandlerContainer {
      * @param handler Set the {@link Handler} which should be wrapped.
      */
     public void setHandler(Handler handler) {
+        // 已经启动则不允许添加
         if (isStarted()) {
             throw new IllegalStateException(STARTED);
         }
