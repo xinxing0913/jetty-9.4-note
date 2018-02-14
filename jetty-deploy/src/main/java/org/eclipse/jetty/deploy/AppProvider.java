@@ -25,11 +25,15 @@ import org.eclipse.jetty.util.component.LifeCycle;
 
 /**
  * Object responsible for providing {@link App}s to the {@link DeploymentManager}
+ *
+ * 应用提供器
+ * 它的主要目的是扫描文件系统，并且找到可部署的上下文
  */
-public interface AppProvider extends LifeCycle
-{
+public interface AppProvider extends LifeCycle {
     /**
      * Set the Deployment Manager
+     *
+     * 设置部署管理器
      * 
      * @param deploymentManager the deployment manager
      * @throws IllegalStateException
@@ -39,6 +43,9 @@ public interface AppProvider extends LifeCycle
     
     /* ------------------------------------------------------------ */
     /** Create a ContextHandler for an App
+     *
+     * 创建上下文处理器
+     *
      * @param app The App
      * @return A ContextHandler
      * @throws IOException if unable to create context
