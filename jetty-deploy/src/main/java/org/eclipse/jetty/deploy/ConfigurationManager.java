@@ -24,8 +24,14 @@ import java.util.Map;
  * ConfigurationManager
  * 
  * Type for allow injection of property values for replacement in jetty xml files during deployment.
+ *
+ * 配置管理器
  */
-public interface ConfigurationManager
-{
+public interface ConfigurationManager {
+    /**
+     * 获取属性映射
+     *
+     * @return
+     */
     public Map<String, String> getProperties();
 }
